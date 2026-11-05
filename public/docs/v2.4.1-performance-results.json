@@ -1,0 +1,386 @@
+{
+  "baseline": {
+    "environment": "Headless Chromium, SwiftShader software rendering, fullscreen 1440\u00d71080, DPR 1, same continuous-fire patrol; 1.8s warmup + 7s sample. Hardware FPS is not implied.",
+    "root": "/tmp/skychrome-v240-before-perf/dist",
+    "results": [
+      {
+        "quality": "low",
+        "adaptive": false,
+        "fps": 42,
+        "p95Ms": 33.400000000000546,
+        "mode": "playing",
+        "time": 9.133333333333367,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 401,
+          "calls": 19,
+          "triangles": 15864,
+          "textures": 3,
+          "geometries": 32,
+          "width": 692,
+          "height": 519,
+          "resolutionScale": 1,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 7.0025,
+          "ScriptDuration": 0.3165,
+          "LayoutDuration": 0.0905,
+          "RecalcStyleDuration": 0.0246,
+          "LayoutCount": 138,
+          "RecalcStyleCount": 200
+        },
+        "heapMB": 8,
+        "errors": []
+      },
+      {
+        "quality": "balanced",
+        "adaptive": false,
+        "fps": 28.9,
+        "p95Ms": 50.099999999998545,
+        "mode": "playing",
+        "time": 9.150000000000034,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 289,
+          "calls": 19,
+          "triangles": 15870,
+          "textures": 3,
+          "geometries": 32,
+          "width": 923,
+          "height": 692,
+          "resolutionScale": 1,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 7.051,
+          "ScriptDuration": 0.2377,
+          "LayoutDuration": 0.0683,
+          "RecalcStyleDuration": 0.0178,
+          "LayoutCount": 103,
+          "RecalcStyleCount": 137
+        },
+        "heapMB": 11,
+        "errors": []
+      },
+      {
+        "quality": "high",
+        "adaptive": false,
+        "fps": 18.5,
+        "p95Ms": 66.70000000000073,
+        "mode": "playing",
+        "time": 9.1166666666667,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 209,
+          "calls": 19,
+          "triangles": 15876,
+          "textures": 3,
+          "geometries": 32,
+          "width": 1264,
+          "height": 948,
+          "resolutionScale": 1,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 7.1055,
+          "ScriptDuration": 0.1626,
+          "LayoutDuration": 0.0605,
+          "RecalcStyleDuration": 0.0129,
+          "LayoutCount": 85,
+          "RecalcStyleCount": 107
+        },
+        "heapMB": 8,
+        "errors": []
+      },
+      {
+        "quality": "balanced",
+        "adaptive": true,
+        "fps": 55.7,
+        "p95Ms": 16.800000000000182,
+        "mode": "playing",
+        "time": 8.91666666666669,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 485,
+          "calls": 19,
+          "triangles": 15870,
+          "textures": 3,
+          "geometries": 32,
+          "width": 491,
+          "height": 368,
+          "resolutionScale": 0.532512,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 5.7028,
+          "ScriptDuration": 0.3723,
+          "LayoutDuration": 0.0889,
+          "RecalcStyleDuration": 0.0328,
+          "LayoutCount": 151,
+          "RecalcStyleCount": 214
+        },
+        "heapMB": 9,
+        "errors": []
+      }
+    ]
+  },
+  "optimized": {
+    "environment": "Headless Chromium, SwiftShader software rendering, fullscreen, viewport recorded per case (default 1440\u00d71080), DPR 1, same continuous-fire patrol; 1.8s warmup + 7s sample. Hardware FPS is not implied.",
+    "root": "/workspace/Python/dist",
+    "results": [
+      {
+        "quality": "low",
+        "adaptive": false,
+        "fps": 59.8,
+        "p95Ms": 16.799999999999272,
+        "mode": "playing",
+        "time": 9.133333333333367,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 533,
+          "calls": 19,
+          "triangles": 15864,
+          "textures": 3,
+          "geometries": 32,
+          "width": 565,
+          "height": 424,
+          "resolutionScale": 1,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 5.8462,
+          "ScriptDuration": 0.3972,
+          "LayoutDuration": 0.0182,
+          "RecalcStyleDuration": 0.0191,
+          "LayoutCount": 47,
+          "RecalcStyleCount": 114
+        },
+        "heapMB": 10,
+        "errors": []
+      },
+      {
+        "quality": "balanced",
+        "adaptive": false,
+        "fps": 47.5,
+        "p95Ms": 33.399999999999636,
+        "mode": "playing",
+        "time": 9.033333333333362,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 439,
+          "calls": 19,
+          "triangles": 15868,
+          "textures": 3,
+          "geometries": 32,
+          "width": 800,
+          "height": 600,
+          "resolutionScale": 1,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 7.0084,
+          "ScriptDuration": 0.3002,
+          "LayoutDuration": 0.0162,
+          "RecalcStyleDuration": 0.0143,
+          "LayoutCount": 38,
+          "RecalcStyleCount": 86
+        },
+        "heapMB": 8,
+        "errors": []
+      },
+      {
+        "quality": "high",
+        "adaptive": false,
+        "fps": 37.2,
+        "p95Ms": 33.400000000000546,
+        "mode": "playing",
+        "time": 9.05000000000003,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 359,
+          "calls": 19,
+          "triangles": 15874,
+          "textures": 3,
+          "geometries": 32,
+          "width": 979,
+          "height": 734,
+          "resolutionScale": 1,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 7.0784,
+          "ScriptDuration": 0.2393,
+          "LayoutDuration": 0.0144,
+          "RecalcStyleDuration": 0.0128,
+          "LayoutCount": 39,
+          "RecalcStyleCount": 79
+        },
+        "heapMB": 9,
+        "errors": []
+      },
+      {
+        "quality": "balanced",
+        "adaptive": true,
+        "fps": 57.6,
+        "p95Ms": 16.800000000000182,
+        "mode": "playing",
+        "time": 8.98333333333336,
+        "render": {
+          "scene": "flight",
+          "hangarYaw": 3.561592653589793,
+          "jetRoll": 0,
+          "cameraRoll": 0,
+          "frames": 509,
+          "calls": 19,
+          "triangles": 15868,
+          "textures": 3,
+          "geometries": 32,
+          "width": 688,
+          "height": 516,
+          "resolutionScale": 0.86,
+          "software": true,
+          "enemyInstances": 0,
+          "particles": 0
+        },
+        "cpu": {
+          "TaskDuration": 6.6742,
+          "ScriptDuration": 0.3503,
+          "LayoutDuration": 0.0158,
+          "RecalcStyleDuration": 0.0256,
+          "LayoutCount": 42,
+          "RecalcStyleCount": 103
+        },
+        "heapMB": 9,
+        "errors": []
+      }
+    ]
+  },
+  "equalResolution": {
+    "baseline": {
+      "environment": "Headless Chromium, SwiftShader software rendering, fullscreen, viewport recorded per case (default 1440\u00d71080), DPR 1, same continuous-fire patrol; 1.8s warmup + 7s sample. Hardware FPS is not implied.",
+      "root": "/tmp/skychrome-v240-before-perf/dist",
+      "results": [
+        {
+          "quality": "balanced",
+          "adaptive": false,
+          "viewport": {
+            "width": 800,
+            "height": 600
+          },
+          "fps": 43,
+          "p95Ms": 33.399999999999636,
+          "mode": "playing",
+          "time": 9.183333333333369,
+          "render": {
+            "scene": "flight",
+            "hangarYaw": 3.561592653589793,
+            "jetRoll": 0,
+            "cameraRoll": 0,
+            "frames": 404,
+            "calls": 19,
+            "triangles": 15870,
+            "textures": 3,
+            "geometries": 32,
+            "width": 800,
+            "height": 600,
+            "resolutionScale": 1,
+            "software": true,
+            "enemyInstances": 0,
+            "particles": 0
+          },
+          "cpu": {
+            "TaskDuration": 7.0744,
+            "ScriptDuration": 0.2953,
+            "LayoutDuration": 0.0727,
+            "RecalcStyleDuration": 0.0229,
+            "LayoutCount": 132,
+            "RecalcStyleCount": 188
+          },
+          "heapMB": 10,
+          "errors": []
+        }
+      ]
+    },
+    "optimized": {
+      "environment": "Headless Chromium, SwiftShader software rendering, fullscreen, viewport recorded per case (default 1440\u00d71080), DPR 1, same continuous-fire patrol; 1.8s warmup + 7s sample. Hardware FPS is not implied.",
+      "root": "/workspace/Python/dist",
+      "results": [
+        {
+          "quality": "balanced",
+          "adaptive": false,
+          "viewport": {
+            "width": 800,
+            "height": 600
+          },
+          "fps": 54.4,
+          "p95Ms": 33.399999999999636,
+          "mode": "playing",
+          "time": 9.100000000000032,
+          "render": {
+            "scene": "flight",
+            "hangarYaw": 3.561592653589793,
+            "jetRoll": 0,
+            "cameraRoll": 0,
+            "frames": 500,
+            "calls": 19,
+            "triangles": 15868,
+            "textures": 3,
+            "geometries": 32,
+            "width": 800,
+            "height": 600,
+            "resolutionScale": 1,
+            "software": true,
+            "enemyInstances": 0,
+            "particles": 0
+          },
+          "cpu": {
+            "TaskDuration": 7.0302,
+            "ScriptDuration": 0.313,
+            "LayoutDuration": 0.0147,
+            "RecalcStyleDuration": 0.0154,
+            "LayoutCount": 42,
+            "RecalcStyleCount": 101
+          },
+          "heapMB": 8,
+          "errors": []
+        }
+      ]
+    }
+  }
+}

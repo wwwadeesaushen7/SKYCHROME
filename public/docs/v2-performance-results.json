@@ -1,0 +1,110 @@
+{
+  "renderer": "Chromium headless; 1440\u00d71080 viewport, DPR 1 (SwiftShader in this cloud environment)",
+  "results": [
+    {
+      "quality": "low",
+      "mission": "free",
+      "fps": 56.8,
+      "medianMs": 16.7,
+      "p95Ms": 16.8,
+      "initial": {
+        "frames": 68,
+        "calls": 18,
+        "triangles": 15352,
+        "textures": 3,
+        "geometries": 21,
+        "width": 692,
+        "height": 519,
+        "resolutionScale": 1,
+        "software": true,
+        "enemyInstances": 0,
+        "particles": 0
+      },
+      "final": {
+        "frames": 353,
+        "calls": 18,
+        "triangles": 15352,
+        "textures": 3,
+        "geometries": 21,
+        "width": 595,
+        "height": 446,
+        "resolutionScale": 0.86,
+        "software": true,
+        "enemyInstances": 0,
+        "particles": 0
+      },
+      "heapMB": 11,
+      "errors": []
+    },
+    {
+      "quality": "balanced",
+      "mission": "free",
+      "fps": 50.1,
+      "medianMs": 16.7,
+      "p95Ms": 33.4,
+      "initial": {
+        "frames": 53,
+        "calls": 18,
+        "triangles": 15358,
+        "textures": 3,
+        "geometries": 21,
+        "width": 923,
+        "height": 692,
+        "resolutionScale": 1,
+        "software": true,
+        "enemyInstances": 0,
+        "particles": 0
+      },
+      "final": {
+        "frames": 304,
+        "calls": 18,
+        "triangles": 15358,
+        "textures": 3,
+        "geometries": 21,
+        "width": 683,
+        "height": 512,
+        "resolutionScale": 0.7395999999999999,
+        "software": true,
+        "enemyInstances": 0,
+        "particles": 0
+      },
+      "heapMB": 9,
+      "errors": []
+    },
+    {
+      "quality": "balanced",
+      "mission": "azure",
+      "fps": 50.7,
+      "medianMs": 16.7,
+      "p95Ms": 33.4,
+      "initial": {
+        "frames": 46,
+        "calls": 19,
+        "triangles": 15614,
+        "textures": 3,
+        "geometries": 21,
+        "width": 923,
+        "height": 692,
+        "resolutionScale": 1,
+        "software": true,
+        "enemyInstances": 0,
+        "particles": 0
+      },
+      "final": {
+        "frames": 300,
+        "calls": 20,
+        "triangles": 15854,
+        "textures": 3,
+        "geometries": 21,
+        "width": 587,
+        "height": 440,
+        "resolutionScale": 0.636056,
+        "software": true,
+        "enemyInstances": 0,
+        "particles": 0
+      },
+      "heapMB": 10,
+      "errors": []
+    }
+  ]
+}
