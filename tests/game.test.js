@@ -27,6 +27,9 @@ import {
 } from "../src/fleet.js";
 import { instrumentTelemetry } from "../src/cockpit.js";
 import { normalizeKeys } from "../src/controls.js";
+import { enemyFiringSolution } from "../src/enemy-aim.js";
+import { cannonSamples } from "../src/cannon-audio.js";
+import { planetTextures } from "../src/materials.js";
 
 const tick = (s, seconds, controls = {}) => {
   for (let i = 0; i < seconds * 60; i++) s.update(1 / 60, controls);
@@ -36,6 +39,85 @@ const free = () => {
   s.start();
   return s;
 };
+
+test("enemy lead materially reduces moving-target miss distance across campaign, rank and space", () => {
+  for (const mission of [
+    campaign[0],
+    campaign[99],
+    rankedMission(0),
+    ...SPACE_MISSIONS,
+  ]) {
+    const enemy = { x: -18, y: 63, z: -240 };
+    const player = { x: 10, y: 45, vx: 38, vy: 18 };
+    const time = 240 / 280;
+    const aim = enemyFiringSolution(enemy, player, mission, 90, () => 0.5);
+    const miss = Math.hypot(
+      enemy.x + aim.vx * time - player.x - player.vx * time,
+      enemy.y + aim.vy * time - player.y - player.vy * time,
+    );
+    const oldMiss =
+      Math.hypot(player.vx, player.vy) * time * (1 - mission.enemyAccuracy);
+    assert.ok(miss < oldMiss * 0.65, `${mission.id}: ${miss} vs ${oldMiss}`);
+    // A reversal after launch still defeats predictive fire; it is not homing.
+    const evasiveMiss = Math.hypot(
+      enemy.x + aim.vx * time - player.x + player.vx * time,
+      enemy.y + aim.vy * time - player.y + player.vy * time,
+    );
+    assert.ok(evasiveMiss > 40);
+  }
+});
+test("enemy aim retains bounded spread and finite close-range trajectories", () => {
+  const p = { x: 0, y: 40, vx: 0, vy: 0 };
+  for (let i = 0; i < 100; i++) {
+    const e = { x: 20, y: 50, z: -200 };
+    const shot = enemyFiringSolution(e, p, campaign[0], 90, () => i / 100);
+    assert.ok(
+      Math.hypot(
+        e.x + (shot.vx * 200) / 280,
+        e.y + (shot.vy * 200) / 280 - 40,
+      ) <= 1.81,
+    );
+  }
+  const shot = enemyFiringSolution({ x: 0, y: 40, z: 0 }, p, {}, 0, () => 0.5);
+  assert.ok(Object.values(shot).every(Number.isFinite));
+});
+test("rotary cannon is bounded, click-free and varied at both common sample rates", () => {
+  for (const rate of [44100, 48000]) {
+    const variants = new Set();
+    for (let v = 0; v < 4; v++) {
+      const samples = cannonSamples(rate, v);
+      assert.equal(samples[0], 0);
+      assert.equal(Math.abs(samples.at(-1)), 0);
+      let energy = 0,
+        mean = 0,
+        peak = 0;
+      for (const s of samples) {
+        assert.ok(Number.isFinite(s));
+        energy += s * s;
+        mean += s;
+        peak = Math.max(peak, Math.abs(s));
+      }
+      assert.ok(peak < 0.721 && peak > 0.7);
+      assert.ok(Math.abs(mean / samples.length) < 0.005);
+      assert.ok(Math.sqrt(energy / samples.length) > 0.08);
+      variants.add(samples[230]);
+    }
+    assert.equal(variants.size, 4);
+  }
+});
+test("planet albedo, cloud, relief and roughness maps have continuous longitude seams", () => {
+  const maps = planetTextures(64, 32);
+  for (const tex of Object.values(maps)) {
+    const { data, width, height } = tex.image;
+    assert.equal(data.length, width * height * 4);
+    for (let y = 0; y < height; y++)
+      assert.deepEqual(
+        data.slice(y * width * 4, y * width * 4 + 4),
+        data.slice((y * width + width - 1) * 4, (y * width + width) * 4),
+      );
+    tex.dispose();
+  }
+});
 
 for (const mission of campaign)
   test(`campaign ${mission.level}: all stages required, progression and replay protection`, () => {

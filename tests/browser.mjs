@@ -74,7 +74,7 @@ try {
     "release, lobby, guest profile and preserved reward count",
     async () => {
       const s = await state();
-      assert.equal(s.version, "2.8.0");
+      assert.equal(s.version, "2.9.0");
       assert.equal(s.mode, "deck");
       assert.equal(s.profile.unlockedLevel, 1);
       assert.equal(s.profile.skins.length, 3);
@@ -159,6 +159,8 @@ try {
       await launch();
       assert.equal((await state()).mapId, map);
       assert.equal((await state()).render.spaceVisible, false);
+      assert.match((await state()).render.terrainShader, /triplanar/);
+      assert.ok((await state()).render.waterVertices > 2000);
       assert.equal((await state()).status, "playing");
       await page.screenshot({ path: `${output}/${map}.png` });
     });
@@ -232,6 +234,19 @@ try {
       assert.equal(s.adaptiveResolution, false);
       assert.equal(s.render.resolutionScale, 1);
       await page.screenshot({ path: output + "/high-cockpit.png" });
+    },
+  );
+  await check(
+    "high space planet relief, separate clouds and orbital lighting",
+    async () => {
+      await load();
+      await page.locator('[data-flight-mode="space"]').click();
+      await launch();
+      const s = await state();
+      assert.equal(s.render.planetRelief, true);
+      assert.equal(s.render.planetClouds, true);
+      assert.ok(s.render.spaceAmbient < 0.2);
+      await page.screenshot({ path: output + "/high-space.png" });
     },
   );
   await check("mobile layout, touch firing and camera button", async () => {

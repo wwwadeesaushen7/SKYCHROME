@@ -1,5 +1,6 @@
 // Reconstructed from the shipped v2.7.0 game; readable simulation and terrain core.
 import { updateSpaceFlight } from "./space.js";
+import { enemyFiringSolution } from "./enemy-aim.js";
 const re = (i, e, s) => Math.max(e, Math.min(s, i)),
   le = (i, e, s, t) => i + (e - i) * (1 - Math.exp(-s * t)),
   dt = 9.81,
@@ -1043,17 +1044,14 @@ class ea {
           a.cooldown =
             this.mission.fireInterval ||
             (this.mission.id === "crimson" ? 1.2 : 2.2);
-          const v = Math.abs(a.z) / (190 + this.speed),
-            w = this.mission.enemyAccuracy || 0,
-            y = a.ai ? (this.mission.enemyAimSpread ?? 7) : 0;
           (this.hostileBullets.push({
             id: this.id++,
             x: a.x,
             y: a.y,
             z: a.z,
-            vx: (t.x + t.vx * v * w - a.x + (this.random() - 0.5) * y) / v,
-            vy: (t.y + t.vy * v * w - a.y + (this.random() - 0.5) * y) / v,
-            vz: 190,
+            ...enemyFiringSolution(a, t, this.mission, this.speed, () =>
+              this.random(),
+            ),
             life: 4,
           }),
             this.emit("enemyShoot", { x: a.x, y: a.y, z: a.z }));

@@ -27,11 +27,12 @@ with zipfile.ZipFile(source, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
                 raise ValueError(f'Refusing to package symlink: {rel}')
             z.write(p, Path(f'SKYCHROME-v{version}-source') / rel)
 
-manifest = {}
+manifest_path = out / 'checksums.json'
+manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
 for p in [website, source]:
     with zipfile.ZipFile(p) as z:
         if z.testzip() is not None:
             raise RuntimeError(f'Archive integrity failure: {p.name}')
         print(f'{p.name}: {len(z.infolist())} files, {p.stat().st_size:,} bytes')
     manifest[p.name] = {'bytes': p.stat().st_size, 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}
-(out / 'checksums.json').write_text(json.dumps(manifest, indent=2) + '\n')
+manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')

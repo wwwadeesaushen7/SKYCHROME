@@ -6,5 +6,13 @@
   "SKYCHROME-v2.8.0-source.zip": {
     "bytes": 3532973,
     "sha256": "19bd2d08503b54346e1e8b286c4f79a60f08cd2a3aa55adfa16891fa47fbae6b"
+  },
+  "SKYCHROME-v2.9.0-website.zip": {
+    "bytes": 2250049,
+    "sha256": "a47b11898dc11af86b083528e221caced8abb0502a562066ffc5615d8e272802"
+  },
+  "SKYCHROME-v2.9.0-source.zip": {
+    "bytes": 3543035,
+    "sha256": "08a744859bf415c9d7cf03688d9a74371a7ebdbe981d66f3510b338e595c7aeb"
   }
 }

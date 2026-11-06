@@ -6,6 +6,7 @@ import {
 } from "./fleet.js";
 import { SPACE_MISSIONS, updateSpaceFlight } from "./space.js";
 import { UpgradeRenderer } from "./world.js";
+import { createCannonBuffers } from "./cannon-audio.js";
 import "./upgrades.css";
 import {
   S as fi,
@@ -2272,52 +2273,6 @@ async function za(i) {
     (s.pause(), s.removeAttribute("src"), s.load());
   }
 }
-function Ca(i) {
-  const e = i.sampleRate,
-    s = Math.ceil(e * 0.19);
-  return Array.from({ length: 3 }, (t, n) => {
-    const o = i.createBuffer(1, s, e),
-      r = o.getChannelData(0);
-    let a = 18731 + n * 997,
-      c = 0,
-      h = 0,
-      l = 0,
-      d = 0;
-    const u = () => (
-      (a = (Math.imul(a, 1664525) + 1013904223) >>> 0),
-      a / 2147483648 - 1
-    );
-    for (let p = 0; p < s; p++) {
-      const v = p / e;
-      let w = 0;
-      for (const y of [0, 0.018]) {
-        const m = v - y;
-        if (m < 0) continue;
-        const b = u();
-        c += (b - c) * 0.24;
-        const S = (b - c) * Math.exp(-m * 175) * 0.9,
-          M = (1 - m / 0.009) * Math.exp(-m / 0.009) * 0.42,
-          $ =
-            (c * 0.85 +
-              Math.sin(m * Math.PI * 2 * 81) * 0.22 +
-              Math.sin(m * Math.PI * 2 * 137) * 0.12) *
-            Math.exp(-m * 31),
-          z =
-            (Math.sin(2 * Math.PI * (930 + n * 37) * m) * 0.08 +
-              Math.sin(2 * Math.PI * 2241 * m) * 0.05) *
-            Math.exp(-m * 100),
-          k = c * Math.exp(-m * 22) * 0.23;
-        w += (S + M + $ + z + k) * (1 - Math.exp(-m * 3600));
-      }
-      ((l = w - h + 0.98 * l),
-        (h = w),
-        (r[p] = Math.tanh(l) * Math.min(1, (s - 1 - p) / (e * 0.015))),
-        (d = Math.max(d, Math.abs(r[p]))));
-    }
-    for (let p = 0; p < s; p++) r[p] *= 0.94 / (d || 1);
-    return o;
-  });
-}
 const Ft = (i, e, s) => Math.max(e, Math.min(s, i));
 function Ia(i, e) {
   const s = (i.x ?? e?.player.x ?? 0) - (e?.player.x || 0),
@@ -2455,7 +2410,7 @@ class Oa {
           (this.weaponMeter = new Float32Array(256)),
           this.weaponBus.connect(this.weaponAnalyser),
           this.weaponAnalyser.connect(this.fx),
-          (this.cannonBuffers = Ca(s)),
+          (this.cannonBuffers = createCannonBuffers(s)),
           (this.combatBuffers = Ea(s)),
           (this.reverb = s.createConvolver()),
           (this.reverb.normalize = !1),
@@ -2758,7 +2713,7 @@ class Oa {
     ((o.buffer =
       this.cannonBuffers[this.cannonBursts % this.cannonBuffers.length]),
       (o.playbackRate.value = t ? 0.9 : 1),
-      (r.gain.value = s * (t ? 0.45 : 1.8)),
+      (r.gain.value = s * (t ? 0.3 : 0.8)),
       (a.pan.value = t ? e : this.cannonBursts % 2 ? -0.12 : 0.12),
       o.connect(r),
       r.connect(a),
@@ -3047,7 +3002,8 @@ class Oa {
         mode: this.mode,
         engineRPM: this.engineRPM || 0,
         environment: this.environment || "Coastal wind",
-        soundDesign: "layered-turbine-v3",
+        soundDesign: "rotary-cannon-v4",
+        cannonDesign: "dry-rotary-60rps",
         afterburnerLevel: this.afterburnerGain?.gain.value || 0,
         combatSamples: !!this.combatBuffers,
         voices: this.voices.size,
@@ -4404,7 +4360,7 @@ g("#app").innerHTML = `
   <div class="header-actions"><span class="online"><i></i> ALL SYSTEMS ONLINE</span><span class="header-separator"></span><button class="icon-button" id="sound-button" aria-label="Mute audio">${A("sound")}</button><button class="icon-button" id="settings-button" aria-label="Open settings">${A("settings")}</button><button class="pilot-avatar" id="account-button" aria-label="Player account">P1<span></span></button></div>
 </header>
 <main class="page">
-  <section class="page-intro"><div><div class="eyebrow">A LITTLE ALTITUDE. A LOT OF FREEDOM.</div><h1 id="page-title">Ready for takeoff<span>?</span></h1></div><div class="session-info"><span class="live-dot"></span><span>FLIGHT DECK <b>/</b> <strong id="mode-label">STANDBY</strong></span><span class="session-tag">v2.8.0</span></div></section>
+  <section class="page-intro"><div><div class="eyebrow">A LITTLE ALTITUDE. A LOT OF FREEDOM.</div><h1 id="page-title">Ready for takeoff<span>?</span></h1></div><div class="session-info"><span class="live-dot"></span><span>FLIGHT DECK <b>/</b> <strong id="mode-label">STANDBY</strong></span><span class="session-tag">v2.9.0</span></div></section>
   <div class="progress-strip"><button id="profile-button"><span class="live-dot"></span><strong id="pilot-name">Spectre</strong><span id="save-state">Saved on this device</span></button><button id="rank-button"><span id="pilot-rank">CADET</span><strong id="pilot-rp">0 RP</strong></button><button id="campaign-button"><span>CAMPAIGN</span><strong id="campaign-count">0 / 100</strong></button><button id="skins-button"><span>HANGAR</span><strong id="skin-count">3 / 21 skins</strong></button></div>
   <div class="flight-layout">
     <section class="flight-stage" id="flight-stage" aria-label="Flight simulator">
@@ -5640,7 +5596,7 @@ try {
 Object.defineProperty(window, "__SKYCHROME__", {
   value: {
     getState: () => ({
-      version: "2.8.0",
+      version: "2.9.0",
       vehicle: R?.jet.userData.vehicleId,
       cameraView: _e ? "cockpit" : "chase",
       instruments: R?.upgrades.cockpit.telemetry || null,
@@ -5743,6 +5699,11 @@ Object.defineProperty(window, "__SKYCHROME__", {
               .map((m) => m.userData.vehicleId),
             mapId: R.mapId,
             textured: !!R.terrain.material.uniforms?.map?.value,
+            terrainShader: R.terrain.material.name,
+            waterVertices: R.ocean.geometry.attributes.position.count,
+            planetRelief: !!R.upgrades.planet.material.bumpMap,
+            planetClouds: R.upgrades.planetClouds.visible,
+            spaceAmbient: R.hemisphere.intensity,
             physicallyBased: R.jet.userData.metal.isMeshStandardMaterial === !0,
             environmentReflections: !!R.scene.environment,
             groundDetails: R.detailMesh.count,

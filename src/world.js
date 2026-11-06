@@ -2,45 +2,16 @@ import * as T from "./three.js";
 import { createVehicle, disposeVehicle, AIRCRAFT } from "./fleet.js";
 import { Cockpit } from "./cockpit.js";
 
-const hash = (x, y) => {
-  let n = Math.imul(x + 17, 374761393) ^ Math.imul(y + 31, 668265263);
-  n = Math.imul(n ^ (n >>> 13), 1274126177);
-  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
-};
-function noise(x, y) {
-  const ix = Math.floor(x),
-    iy = Math.floor(y),
-    fx = x - ix,
-    fy = y - iy,
-    s = fx * fx * (3 - 2 * fx),
-    t = fy * fy * (3 - 2 * fy);
-  return (
-    (hash(ix, iy) * (1 - s) + hash(ix + 1, iy) * s) * (1 - t) +
-    (hash(ix, iy + 1) * (1 - s) + hash(ix + 1, iy + 1) * s) * t
-  );
-}
-let groundTexture;
-function reliefTexture() {
-  if (groundTexture) return groundTexture;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 512;
-  const c = canvas.getContext("2d"),
-    image = c.createImageData(512, 512);
-  for (let y = 0; y < 512; y++)
-    for (let x = 0; x < 512; x++) {
-      const value =
-        135 +
-        noise(x / 16, y / 16) * 45 +
-        noise(x / 4, y / 4) * 35 +
-        hash(x, y) * 24;
-      image.data.set([value, value, value, 255], (y * 512 + x) * 4);
-    }
-  c.putImageData(image, 0, 0);
-  groundTexture = new T.CanvasTexture(canvas);
-  groundTexture.wrapS = groundTexture.wrapT = T.RepeatWrapping;
-  groundTexture.anisotropy = 8;
-  return groundTexture;
-}
+import {
+  hash,
+  surfaceTextures,
+  terrainMaterial,
+  upgradeSky,
+  upgradeWater,
+  planetTextures,
+  nebulaTexture,
+} from "./materials.js";
+
 export class UpgradeRenderer {
   constructor(owner, textures, paintFor) {
     this.owner = owner;
@@ -71,6 +42,8 @@ export class UpgradeRenderer {
     this.spaceGroup.visible = false;
     owner.scene.add(this.spaceGroup);
     this.buildSpace();
+    upgradeSky(owner.sky.material);
+    upgradeWater(owner.ocean.material);
     this.configure(owner.settings);
     this.enhanceTerrain();
   }
@@ -79,29 +52,7 @@ export class UpgradeRenderer {
     if (r.terrain === this.lastTerrain) return;
     this.lastTerrain = r.terrain;
     const previous = r.terrain.material;
-    const material = new T.MeshStandardMaterial({
-      vertexColors: true,
-      map: reliefTexture(),
-      bumpMap: reliefTexture(),
-      bumpScale: 0.8,
-      roughness: 0.95,
-      metalness: 0.02,
-    });
-    material.uniforms = {
-      ...previous.uniforms,
-      map: { value: reliefTexture() },
-    };
-    material.onBeforeCompile = (shader) => {
-      shader.uniforms.worldDistance = r.worldDistance;
-      shader.vertexShader =
-        "uniform float worldDistance; attribute float islandZ;\n" +
-        shader.vertexShader;
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <begin_vertex>",
-        "#include <begin_vertex>\n transformed.z += mod(mod(islandZ+worldDistance+3400.,3900.)+3900.,3900.)-3400.;",
-      );
-    };
-    material.customProgramCacheKey = () => "skychrome-terrain-2.8";
+    const material = terrainMaterial(previous, r.worldDistance, r.mapId);
     r.terrain.material = material;
     r.terrain.receiveShadow = true;
     previous.dispose();
@@ -110,6 +61,15 @@ export class UpgradeRenderer {
     this.settings = settings;
     const r = this.owner,
       high = settings.quality === "high";
+    const segments = high ? 192 : settings.quality === "low" ? 48 : 128;
+    if (segments !== this.waterSegments) {
+      r.ocean.geometry.dispose();
+      r.ocean.geometry = new T.PlaneGeometry(16000, 16000, segments, segments);
+      this.waterSegments = segments;
+    }
+    r.sky.material.uniforms.detail.value = settings.quality === "low" ? 0 : 1;
+    this.planetClouds.visible = settings.quality !== "low";
+    this.stars.count = high ? 1400 : settings.quality === "low" ? 700 : 1100;
     r.renderer.shadowMap.enabled = settings.quality !== "low";
     const size = high ? 2048 : 1024;
     if (this.shadowSun.shadow.mapSize.x !== size) {
@@ -197,6 +157,13 @@ export class UpgradeRenderer {
     r.scene.background = space ? this.spaceBackground : null;
     r.scene.fog.density = space ? 0 : this.fogDensity || 0.00075;
     this.shadowSun.intensity = space ? 2.2 : 1.8;
+    r.hemisphere.intensity = space ? 0.16 : 0.95;
+    r.scene.environmentIntensity = space ? 0.16 : 0.65;
+    r.sunLight.intensity = space ? 2.4 : 1.1;
+    if (space) {
+      r.sunLight.position.set(-0.62, 0.38, 0.68).normalize();
+      r.sunLight.color.setHex(0xffecd5);
+    }
     r.projectileBatches[0].material.color.set(
       space ? (this.id === "tie" ? 0x63ff84 : 0xff6555) : 0xbeffff,
     );
@@ -236,56 +203,94 @@ export class UpgradeRenderer {
     }
     this.stars.frustumCulled = false;
     this.spaceGroup.add(this.stars);
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 512;
-    const c = canvas.getContext("2d"),
-      image = c.createImageData(1024, 512);
-    for (let y = 0; y < 512; y++)
-      for (let x = 0; x < 1024; x++) {
-        const n = noise(x / 90, y / 65) + noise(x / 28, y / 24) * 0.35,
-          cloud =
-            noise(x / 70 + 60, y / 24) * 0.65 + noise(x / 18, y / 10) * 0.35;
-        let color =
-          n > 0.69
-            ? [52 + n * 36, 91 + n * 40, 68 + n * 12]
-            : [10, 40 + n * 22, 73 + n * 42];
-        if (cloud > 0.69)
-          color = color.map(
-            (v) => v * (1 - (cloud - 0.69) * 2) + 225 * (cloud - 0.69) * 2,
-          );
-        if (y < 30 || y > 480) color = [188, 211, 221];
-        image.data.set([...color, 255], (y * 1024 + x) * 4);
-      }
-    c.putImageData(image, 0, 0);
-    const tex = new T.CanvasTexture(canvas);
-    tex.colorSpace = T.SRGBColorSpace;
+    const maps = planetTextures();
     this.planet = new T.Mesh(
-      new T.SphereGeometry(850, 64, 48),
-      new T.MeshStandardMaterial({ map: tex, roughness: 0.85 }),
+      new T.SphereGeometry(850, 96, 64),
+      new T.MeshStandardMaterial({
+        map: maps.map,
+        bumpMap: maps.bumpMap,
+        bumpScale: 5,
+        roughnessMap: maps.roughnessMap,
+        roughness: 1,
+        metalness: 0.06,
+        emissiveMap: maps.cities,
+        emissive: 0xffb65d,
+        emissiveIntensity: 0.5,
+      }),
     );
-    this.planet.position.set(1250, -400, -2900);
+    this.planet.material.onBeforeCompile = (shader) => {
+      shader.uniforms.planetSun = { value: this.owner.sunLight.position };
+      shader.vertexShader =
+        "varying vec3 planetNormal;\n" + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\nplanetNormal = mat3(modelMatrix) * normal;",
+      );
+      shader.fragmentShader =
+        "varying vec3 planetNormal;uniform vec3 planetSun;\n" +
+        shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <emissivemap_fragment>",
+        "#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1. - smoothstep(-.15,.12,dot(normalize(planetNormal),planetSun));",
+      );
+    };
+    this.planet.material.customProgramCacheKey = () => "orbital-day-night-v2.9";
+    this.planet.position.set(1050, -280, -2500);
     this.planet.rotation.z = 0.28;
     this.spaceGroup.add(this.planet);
+    this.planetClouds = new T.Mesh(
+      new T.SphereGeometry(857, 80, 56),
+      new T.MeshStandardMaterial({
+        map: maps.clouds,
+        transparent: true,
+        depthWrite: false,
+        roughness: 1,
+        opacity: 0.9,
+      }),
+    );
+    this.planetClouds.position.copy(this.planet.position);
+    this.planetClouds.rotation.z = 0.28;
+    this.spaceGroup.add(this.planetClouds);
     const atmosphere = new T.Mesh(
-      new T.SphereGeometry(875, 48, 32),
+      new T.SphereGeometry(879, 64, 48),
       new T.ShaderMaterial({
         transparent: true,
         depthWrite: false,
         side: T.BackSide,
-        uniforms: {},
+        uniforms: { sun: { value: this.owner.sunLight.position } },
         vertexShader:
-          "varying vec3 n; varying vec3 v;void main(){vec4 p=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);v=normalize(-p.xyz);gl_Position=projectionMatrix*p;}",
+          "varying vec3 n;varying vec3 v;varying vec3 wn;void main(){vec4 p=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);wn=mat3(modelMatrix)*normal;v=normalize(-p.xyz);gl_Position=projectionMatrix*p;}",
         fragmentShader:
-          "varying vec3 n;varying vec3 v;void main(){float a=pow(1.-abs(dot(normalize(n),normalize(v))),3.);gl_FragColor=vec4(.16,.48,1.,a*.6);}",
+          "varying vec3 n;varying vec3 v;varying vec3 wn;uniform vec3 sun;void main(){float rim=pow(1.-abs(dot(normalize(n),normalize(v))),3.5);float daylight=smoothstep(-.4,.5,dot(normalize(wn),sun));gl_FragColor=vec4(mix(vec3(.07,.16,.4),vec3(.22,.56,1.),daylight),rim*(.15+daylight*.65));}",
       }),
     );
     atmosphere.position.copy(this.planet.position);
     this.spaceGroup.add(atmosphere);
-    const rockGeometry = new T.IcosahedronGeometry(1, 1),
+    this.nebula = new T.Mesh(
+      new T.SphereGeometry(5000, 48, 24),
+      new T.MeshBasicMaterial({
+        map: nebulaTexture(),
+        side: T.BackSide,
+        depthWrite: false,
+        fog: false,
+        toneMapped: false,
+      }),
+    );
+    this.nebula.renderOrder = -10;
+    this.spaceGroup.add(this.nebula);
+    const rockGeometry = new T.IcosahedronGeometry(1, 3),
       positions = rockGeometry.attributes.position;
     for (let j = 0; j < positions.count; j++) {
-      const scale = 0.8 + hash(j, 7) * 0.4;
+      // Hash coordinates, not vertex indices: coincident vertices must stay
+      // coincident so the deformed rock has no cracks between triangles.
+      const scale =
+        0.88 +
+        hash(
+          Math.round(positions.getX(j) * 700),
+          Math.round(positions.getY(j) * 700),
+          Math.round(positions.getZ(j) * 700),
+        ) *
+          0.2;
       positions.setXYZ(
         j,
         positions.getX(j) * scale,
@@ -296,7 +301,13 @@ export class UpgradeRenderer {
     rockGeometry.computeVertexNormals();
     this.rocks = new T.InstancedMesh(
       rockGeometry,
-      new T.MeshStandardMaterial({ color: 0x676775, roughness: 0.96 }),
+      new T.MeshStandardMaterial({
+        color: 0xb7aaa0,
+        map: surfaceTextures("caldera").rock,
+        bumpMap: surfaceTextures("caldera").rock,
+        bumpScale: 0.16,
+        roughness: 0.94,
+      }),
       90,
     );
     this.rocks.frustumCulled = false;
@@ -307,7 +318,7 @@ export class UpgradeRenderer {
       new T.SphereGeometry(45, 16, 12),
       new T.MeshBasicMaterial({ color: 0xffe5bc, toneMapped: false }),
     );
-    sun.position.set(-1900, 900, -3200);
+    sun.position.set(-2400, 1500, 2600);
     this.spaceGroup.add(sun);
     const station = new T.Group();
     station.position.set(-950, 200, -2400);
@@ -344,6 +355,7 @@ export class UpgradeRenderer {
   update(state, cockpit, time) {
     const r = this.owner,
       p = state.player;
+    r.sky.material.uniforms.time.value = time;
     this.cockpit.update(state, cockpit);
     r.enemies.visible = false;
     this.enemyModels.forEach((model, i) => {
@@ -364,6 +376,8 @@ export class UpgradeRenderer {
       r.effects.shadow.visible = false;
       r.effects.trails.visible = false;
       this.stars.position.copy(r.camera.position);
+      this.nebula.position.copy(r.camera.position);
+      this.planetClouds.rotation.y = time * 0.0055 + 0.04;
       this.planet.rotation.y = time * 0.004;
       for (let i = 0; i < 90; i++) {
         this.dummy.position.set(

@@ -1,63 +1,55 @@
-# SKYCHROME v2.8.0 validation
+# SKYCHROME v2.9.0 validation
 
-Validated on 5 November 2026 using Node.js 24.22.1, Vite 7.1.12 and
-Chromium with SwiftShader software rendering.
+Validated on 6 November 2026 using Node.js 24.22.1, Vite 7.1.12 and Chromium
+with SwiftShader software rendering.
 
 ## Results
 
-- Production build completed. Vite reports an advisory about the preserved
-  Three.js chunk exceeding 500 kB; there are no build errors.
-- **113 automated simulation, progression, save and model checks passed.**
-  These cover all 100 campaign stage definitions, reward/rank rules, profile
-  compatibility, collision, cannon/missile damage, both space missions,
-  cockpit telemetry, key migration and five distinct vehicle meshes.
-- **18 browser scenarios passed across the production runs and targeted
-  reruns.** Coverage includes three aircraft, independent paint persistence,
-  campaign/ranked launch, pause/fullscreen, all four terrain maps, X-wing and
-  TIE combat/cockpits, return from space to atmospheric flight, High graphics
-  with shadows, and mobile touch firing/camera switching.
-- **6 service/audio scenarios passed.** These cover save backup import/export,
-  custom music persistence, account SDK initialization, email login request
-  construction, cloud profile revision handling, guest restoration on sign-out,
-  and space laser/ion-drive audio. Account requests used a simulated backend.
-- The final browser/service runs reported no JavaScript, shader or HTTP errors.
+- **117 automated checks passed.** These include all 100 campaign stage
+  definitions, progression/save compatibility, collision, missiles, space flight,
+  cockpit telemetry and vehicle models. New checks verify reduced moving-target
+  miss distance, bounded enemy dispersion, evasive reversals, cannon waveform
+  bounds at 44.1/48 kHz, and continuous planet texture seams.
+- **19 browser scenarios passed in one complete production run.** These cover
+  all aircraft, independent skins, four terrain maps, campaign/ranked/space,
+  cockpit switching, pause/fullscreen, High graphics and mobile touch controls.
+  New checks cover terrain shader selection, wave geometry, planet relief,
+  the separate cloud layer and orbital lighting.
+- **7 service/audio scenarios passed.** Save backup roundtrips, custom music
+  persistence, simulated account integration, sustained normal-jet cannon fire
+  and the unchanged space laser audio were exercised in Chromium.
+- No JavaScript, shader-compilation or HTTP asset errors were recorded.
+- The production build succeeded. The preserved Three.js chunk still produces
+  Vite's advisory about chunks exceeding 500 kB; it is not a build failure.
 
-The first production browser run hit a mobile navigation timeout while another
-software-rendered context was still open. The test now closes that context
-before starting mobile checks. Mobile testing also found a hidden camera button;
-a dedicated touch VIEW button was added. Mobile and affected rendering/audio
-scenarios passed after these fixes. Counts above include each scenario once;
-they are not the sum of duplicate reruns.
+Current machine-readable results are in `public/docs/v2.9.0-validation.json`
+(`docs/v2.9.0-validation.json` inside the website ZIP). Older reports describe
+previous releases and are retained as historical records.
 
-The consolidated scenario report is in `public/docs/v2.8.0-validation.json`
-(or `docs/v2.8.0-validation.json` in the website ZIP). Historical reports for
-earlier releases were supplied with the old website and are not current test
-evidence.
+## Delivery
 
-## Delivery checks
+The ready-to-host ZIP contains `index.html` at its root, built assets, source
+maps, music, fonts and account configuration. The separate editable-source ZIP
+contains source modules, pinned dependencies, tests and the unchanged original
+v2.7.0 website ZIP; it excludes installed dependencies and local build output.
+Before delivery, the source archive is extracted into a separate directory,
+installed from its lockfile, built and tested. ZIP integrity and SHA-256 hashes
+are checked. Previous v2.8.0 archives remain available under `artifacts/`.
 
-Both archives are checked for ZIP integrity. The website has `index.html` at
-its root, all generated assets, source maps, audio, fonts, account configuration
-and documentation. The source archive contains the editable modules, tests,
-lockfile and unchanged original v2.7.0 ZIP. It excludes installed dependencies,
-build output, local screenshots and Git metadata.
+## Limits
 
-The source archive is independently extracted, installed from the pinned
-lockfile, built and tested before delivery. `artifacts/checksums.json` records
-the SHA-256 and size of each final download.
+- The normal cannon sound is original synthesized rotary-cannon audio, not a
+  field recording. The space laser sound remains unchanged. Audio tests check
+  signal generation and bounded levels, not a listener's subjective preference.
+- Terrain, planet and nebula textures are procedural, not photographic scans.
+  The planet, distant asteroids and station remain scenery outside the bounded
+  forward-flight combat corridor. Ocean waves are visual; existing collision
+  surfaces and mission routes are unchanged.
+- Tests use a software GPU. High targets a 16 GB PC with a capable physical GPU;
+  these checks do not certify gaming-PC frame rates.
+- Live email, Google and Facebook sign-in require the owner's Supabase setup.
+  The supplied public configuration is empty. Account tests intercept provider
+  requests locally; live authentication delivery is not verified.
 
-## Practical limits
-
-- Software rendering confirms behavior and shader compatibility. It does not
-  measure frame rates on a physical 16 GB PC or certify a particular GPU.
-- Live email, Google and Facebook authentication require the owner's Supabase
-  configuration. The supplied configuration is empty, so guest play is enabled
-  and live sign-in remains unverified. Account integration tests intercept all
-  provider requests locally.
-- Space combat uses the existing bounded forward-flight mission format with
-  inertial thrusters. The distant planet, station and asteroid belt are scenery.
-- New models and textures are procedural. Cockpit instruments display game
-  telemetry; this is not a full aircraft systems simulator.
-
-No GitHub push or Netlify deployment was performed. Keep the source archive
-alongside the ready-to-host website archive for future development.
+The source and release ZIPs are delivered through GitHub. No Netlify deployment
+is performed by building or pushing these files.

@@ -1,4 +1,4 @@
-# SKYCHROME v2.8.0
+# SKYCHROME v2.9.0
 
 Editable continuation of the v2.7.0 browser game, with three distinct aircraft,
 independent paint selection, X-wing/TIE space combat, working first-person
@@ -6,8 +6,8 @@ cockpits, and upgraded graphics.
 
 ## Downloads
 
-- [Download the ready-to-host v2.8.0 website ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v2.8.0-website.zip)
-- [Download the editable v2.8.0 source ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v2.8.0-source.zip)
+- [Download the ready-to-host v2.9.0 website ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v2.9.0-website.zip)
+- [Download the editable v2.9.0 source ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v2.9.0-source.zip)
 - [Archive SHA-256 checksums](artifacts/checksums.json)
 
 The editable project is also available directly in this repository. The website
@@ -53,6 +53,28 @@ are written to `test-results/`. The tests use software rendering; they do not
 certify performance on a physical gaming PC.
 
 ## New features
+
+### v2.9.0 sound, aiming and materials
+
+- **Normal jet cannon:** a dry rotary burst with rapid pressure cracks, a deeper
+  body and mechanical detail replaces the harsh amplified double pop. Peak
+  level and gain are reduced. This is an original synthesized sound design,
+  not a field recording. The X-wing/TIE laser sound is unchanged.
+- **Enemy accuracy:** enemies lead moving aircraft more accurately and fire
+  with tighter circular spread. Aces are slightly more precise. Shots predict
+  once when fired and do not home, so changing direction still defeats them.
+  Existing damage, firing intervals, rewards and save formats are unchanged.
+- **Atmosphere:** the four maps now use separate rock/ground materials with
+  slope blending, small-scale relief, wet shorelines and sand. Textures project
+  along all three axes on cliffs to reduce stretching. Waves deform the ocean
+  surface; its shader adds moving ripples, Fresnel sky reflections and sun
+  glints. A new sky shader adds atmospheric haze and thin high clouds.
+- **Space:** a detailed planet has separate land/ocean roughness, relief,
+  rotating clouds, night-side lights and an illuminated atmospheric rim.
+  Textured rocky asteroids, faint galactic dust and lower ambient light add
+  depth. Low quality reduces stars, water subdivisions and cloud layers.
+
+### Retained from v2.8.0
 
 - **Aircraft:** F/A–27 Spectre stealth multirole, F–19 Kestrel delta interceptor,
   and A–12 Thunderbolt ground-attack aircraft. Each has different wings, tails,
@@ -107,6 +129,9 @@ Private credentials must never go in website files.
 | `src/space.js` | Space missions and thruster physics |
 | `src/cockpit.js` | 3D cockpit frames and live instruments |
 | `src/world.js` | Upgraded scenery, shadows, orbital scene and vehicle rendering |
+| `src/materials.js` | Terrain/planet textures, surface relief, sky and water shaders |
+| `src/cannon-audio.js` | Original rotary-cannon sample synthesis |
+| `src/enemy-aim.js` | Predictive hostile fire and bounded dispersion |
 | `src/game.js` | Existing UI, renderer, audio, touch, fullscreen and account integration |
 | `src/vendor/` | Exact Three.js r180 and account SDK bundles from v2.7.0 |
 | `tests/` | Simulation/save tests and browser regression scenarios |

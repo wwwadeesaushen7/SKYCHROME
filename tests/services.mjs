@@ -67,13 +67,11 @@ try {
       const backup = JSON.parse(await fs.readFile(await file.path(), "utf8"));
       assert.equal(backup.profile.name, "Recovered pilot");
       backup.profile.name = "Backup pilot";
-      await p
-        .locator("#import-save")
-        .setInputFiles({
-          name: "backup.json",
-          mimeType: "application/json",
-          buffer: Buffer.from(JSON.stringify(backup)),
-        });
+      await p.locator("#import-save").setInputFiles({
+        name: "backup.json",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(backup)),
+      });
       await p.locator("#confirm-import").click();
       assert.equal(
         await p.locator("#pilot-name").textContent(),
@@ -100,13 +98,11 @@ try {
       wav.write("data", 36);
       wav.writeUInt32LE(16000, 40);
       await p.locator("#settings-button").click();
-      await p
-        .locator("#lobby-music-file")
-        .setInputFiles({
-          name: "Test theme.wav",
-          mimeType: "audio/wav",
-          buffer: wav,
-        });
+      await p.locator("#lobby-music-file").setInputFiles({
+        name: "Test theme.wav",
+        mimeType: "audio/wav",
+        buffer: wav,
+      });
       await p.waitForFunction(
         () => window.__SKYCHROME__.getState().audio.tracks.lobby.custom,
       );
@@ -260,17 +256,54 @@ try {
       assert.equal(await ap.locator("#pilot-name").textContent(), "Spectre");
     },
   );
-  await check("space laser audio and separate ion-drive environment", async () => {
-    await ap.locator('#close-modal').click();
-    await ap.locator('#sound-button').click();
-    await ap.locator('[data-flight-mode="space"]').click();
-    await ap.locator('#launch-button').click();
-    await ap.waitForFunction(() => window.__SKYCHROME__.getState().mode === 'playing');
-    await ap.keyboard.down('Space');
-    await ap.waitForFunction(() => { const s=window.__SKYCHROME__.getState(); return s.shots>0 && s.audio.weaponRms>0; });
-    assert.equal(await ap.evaluate(()=>window.__SKYCHROME__.getState().audio.environment), 'Ion drive · sealed cockpit');
-    await ap.keyboard.up('Space');
-  });
+  await check(
+    "normal jet rotary cannon produces bounded audio during sustained fire",
+    async () => {
+      await ap.locator("#close-modal").click();
+      await ap.locator("#sound-button").click();
+      await ap.locator("#launch-button").click();
+      await ap.waitForFunction(
+        () => window.__SKYCHROME__.getState().mode === "playing",
+      );
+      await ap.keyboard.down("Space");
+      await ap.waitForFunction(() => {
+        const s = window.__SKYCHROME__.getState();
+        return s.shots > 10 && s.audio.weaponRms > 0.01;
+      });
+      const audio = await ap.evaluate(
+        () => window.__SKYCHROME__.getState().audio,
+      );
+      assert.equal(audio.cannonDesign, "dry-rotary-60rps");
+      assert.ok(audio.weaponRms < 0.8);
+      await ap.keyboard.up("Space");
+      await ap.reload();
+      await ap.waitForFunction(
+        () => window.__SKYCHROME__?.getState().render.frames > 1,
+      );
+    },
+  );
+  await check(
+    "space laser audio and separate ion-drive environment",
+    async () => {
+      await ap.locator('[data-flight-mode="space"]').click();
+      await ap.locator("#launch-button").click();
+      await ap.waitForFunction(
+        () => window.__SKYCHROME__.getState().mode === "playing",
+      );
+      await ap.keyboard.down("Space");
+      await ap.waitForFunction(() => {
+        const s = window.__SKYCHROME__.getState();
+        return s.shots > 0 && s.audio.weaponRms > 0;
+      });
+      assert.equal(
+        await ap.evaluate(
+          () => window.__SKYCHROME__.getState().audio.environment,
+        ),
+        "Ion drive · sealed cockpit",
+      );
+      await ap.keyboard.up("Space");
+    },
+  );
   await auth.close();
   await check("no service integration JavaScript errors", async () =>
     assert.deepEqual(errors, []),
