@@ -28,6 +28,7 @@ const check = async (name, fn) => {
   }
 };
 const watch = (p) => {
+  p.setDefaultTimeout(90000);
   p.on("pageerror", (e) => errors.push(e.message));
   p.on("console", (m) => {
     if (m.type() === "error") errors.push(m.text());
@@ -302,6 +303,29 @@ try {
         "Ion drive · sealed cockpit",
       );
       await ap.keyboard.up("Space");
+    },
+  );
+  await check(
+    "return from space to atmospheric flight preserves the current session",
+    async () => {
+      await ap.keyboard.press("p");
+      await ap.locator("#pause-exit").click();
+      await ap.locator("#confirm-exit").click();
+      await ap.waitForFunction(
+        () => window.__SKYCHROME__.getState().mode === "deck",
+      );
+      await ap.locator('[data-flight-mode="quick"]').click();
+      await ap.locator('[data-mission="free"]').click();
+      await ap.locator("#launch-button").click();
+      await ap.waitForFunction(
+        () => window.__SKYCHROME__.getState().time > 0.25,
+      );
+      const s = await ap.evaluate(() => window.__SKYCHROME__.getState());
+      assert.equal(s.render.spaceVisible, false);
+      assert.equal(s.vehicle, "spectre");
+      assert.equal(s.mapId, "azure");
+      assert.equal(s.status, "playing");
+      assert.equal(s.instruments?.space ?? false, false);
     },
   );
   await auth.close();

@@ -1,0 +1,72 @@
+[
+  {
+    "file": "rock-color.png",
+    "source": "https://raw.githubusercontent.com/BabylonJS/Assets/master/textures/rockyGround_basecolor.png",
+    "license": "CC-BY-4.0",
+    "sha256": "e0f9375b366c3bd3375581a329af36fe70ded07ffee8e1156aa6a210c16f486b",
+    "bytes": 1819556
+  },
+  {
+    "file": "rock-normal.png",
+    "source": "https://raw.githubusercontent.com/BabylonJS/Assets/master/textures/rockyGround_normal.png",
+    "license": "CC-BY-4.0",
+    "sha256": "66fccd4db45e00fcc713907208b42aa9b64f4f26db35e9b5251b36756558b7a1",
+    "bytes": 2488211
+  },
+  {
+    "file": "rock-rough.png",
+    "source": "https://raw.githubusercontent.com/BabylonJS/Assets/master/textures/rockyGround_metalRough.png",
+    "license": "CC-BY-4.0",
+    "sha256": "9c92d4710faa18a7e0f547ba0ac7a312732087656b079d9548062f1df09674e8",
+    "bytes": 625737
+  },
+  {
+    "file": "grass-color.jpg",
+    "source": "https://raw.githubusercontent.com/BabylonJS/Assets/master/textures/grass.jpg",
+    "license": "CC-BY-4.0",
+    "sha256": "25ebb5a3408f3a17e80ee1d56fc1290c945076ee648aacb8ac5ff6a0725fc46c",
+    "bytes": 699241
+  },
+  {
+    "file": "sand-color.jpg",
+    "source": "https://raw.githubusercontent.com/BabylonJS/Assets/master/textures/sand.jpg",
+    "license": "CC-BY-4.0",
+    "sha256": "14e81b4cd4dad3d001bf647eef7139d0a89de38be8bd13d551e66e4eeb6b8ecd",
+    "bytes": 459719
+  },
+  {
+    "file": "ice-color.jpg",
+    "source": "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/ambientcg/Ice002_1K-JPG_Color.jpg",
+    "license": "CC0-1.0",
+    "sha256": "9aa010f0fa4e01a982e593eb5b06f82671acc9023a67d9451bbc94cacd7ef44c",
+    "bytes": 1081720
+  },
+  {
+    "file": "ice-normal.jpg",
+    "source": "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/ambientcg/Ice002_1K-JPG_NormalGL.jpg",
+    "license": "CC0-1.0",
+    "sha256": "f2c190e341fede5bec99c86757529e4df387dba8a1ab8127bcc85b7ed528a018",
+    "bytes": 1277023
+  },
+  {
+    "file": "ice-rough.jpg",
+    "source": "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/ambientcg/Ice002_1K-JPG_Roughness.jpg",
+    "license": "CC0-1.0",
+    "sha256": "52a806348c7ddb23f201e4c1fc677e33914f0921ba7253163533daee3c4de121",
+    "bytes": 467557
+  },
+  {
+    "file": "sky-dawn.hdr",
+    "source": "https://raw.githubusercontent.com/pmndrs/drei-assets/master/hdri/kiara_1_dawn_1k.hdr",
+    "license": "CC0-1.0",
+    "sha256": "ee70fb8c8fb3e34566802191d83b299e179ecc392b97639e6c750f66e161c8e2",
+    "bytes": 1475077
+  },
+  {
+    "file": "hangar.hdr",
+    "source": "https://raw.githubusercontent.com/pmndrs/drei-assets/master/hdri/empty_warehouse_01_1k.hdr",
+    "license": "CC0-1.0",
+    "sha256": "9b3d611cadc32c3a0c7e084ce5611c0650293881c4a041e7fa13748fe0dc6451",
+    "bytes": 1672140
+  }
+]

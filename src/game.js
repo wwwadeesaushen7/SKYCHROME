@@ -7,6 +7,8 @@ import {
 import { SPACE_MISSIONS, updateSpaceFlight } from "./space.js";
 import { UpgradeRenderer } from "./world.js";
 import { createCannonBuffers } from "./cannon-audio.js";
+import { groundGeometry } from "./scenery.js";
+import { MeshDepthMaterial } from "./three.js";
 import "./upgrades.css";
 import {
   S as fi,
@@ -669,7 +671,7 @@ function ga(i, e, s) {
       vertexShader: `uniform float worldDistance;attribute float islandZ;varying vec2 vUv;varying float vDepth;void main(){vUv=uv;vec3 p=position;p.z+=mod(mod(islandZ+worldDistance+3400.,${ae}.0)+${ae}.0,${ae}.0)-3400.;vec4 mv=modelViewMatrix*vec4(p,1.);vDepth=-mv.z;gl_Position=projectionMatrix*mv;}`,
       fragmentShader:
         zt +
-        "uniform float time;uniform vec3 shallow;varying vec2 vUv;varying float vDepth;void main(){float edge=abs(vUv.y*2.-1.);float fade=(1.-edge)*(1.-edge);float wash=.6+.4*sin(vUv.x*3.+time*1.4-edge*22.);float foam=(1.-smoothstep(.01,.12,edge))*wash;float alpha=max(fade*.58,foam*.78)*(1.-smoothstep(600.,2000.,vDepth));if(alpha<.005)discard;gl_FragColor=vec4(displayColor(mix(shallow,vec3(.85,.9,.88),foam*.85)),alpha);}",
+        "uniform float time;uniform vec3 shallow;varying vec2 vUv;varying float vDepth;void main(){float edge=abs(vUv.y*2.-1.);float fade=(1.-edge)*(1.-edge);float wash=.6+.4*sin(vUv.x*3.+time*1.4-edge*22.);float foam=(1.-smoothstep(.01,.12,edge))*wash;float alpha=max(fade*.18,foam*.5)*(1.-smoothstep(600.,2000.,vDepth));if(alpha<.005)discard;gl_FragColor=vec4(displayColor(mix(shallow,vec3(.85,.9,.88),foam*.85)),alpha);}",
     }),
     h = new F(a, c);
   return ((h.frustumCulled = !1), h);
@@ -823,9 +825,9 @@ class va {
   }
 }
 function ya(i, e) {
-  const s = new ki(1, 0),
+  const s = groundGeometry(i),
     t = 384,
-    n = new He({ color: 16777215 }),
+    n = new He({ color: 16777215, vertexColors: true }),
     o = new ge(s, n, t),
     r = new Float32Array(t),
     a = new is(),
@@ -853,7 +855,7 @@ function ya(i, e) {
         c
           .setHex(
             y
-              ? 6846795
+              ? 16777215
               : i === "glacier"
                 ? 9016989
                 : i === "canyon"
@@ -880,6 +882,11 @@ function ya(i, e) {
         )));
     }),
     (n.customProgramCacheKey = () => "wrapped-ground-detail-v1"),
+    (o.customDepthMaterial = new MeshDepthMaterial({ depthPacking: 3201 })),
+    (o.customDepthMaterial.onBeforeCompile = n.onBeforeCompile),
+    (o.customDepthMaterial.customProgramCacheKey = () =>
+      "wrapped-scenery-depth-v3"),
+    (o.castShadow = o.receiveShadow = true),
     (o.frustumCulled = !1),
     (o.userData.total = h),
     (o.count = h),
@@ -1085,7 +1092,7 @@ class wa {
   resetView() {
     this.yaw = Math.PI + 0.42;
   }
-  render(e, s, t, n, o) {
+  render(e, s, t, n, o, draw) {
     const r = s / t,
       a = r < 0.85,
       c = !a && t < 600,
@@ -1103,7 +1110,7 @@ class wa {
       ),
       this.camera.updateProjectionMatrix(),
       (this.jet.rotation.y = this.yaw + (o ? 0 : Math.sin(n * 0.15) * 0.018)),
-      e.render(this.scene, this.camera));
+      (draw || e.render.bind(e))(this.scene, this.camera));
   }
 }
 const At = (i) => W.find((e) => e.id === i) || W[0],
@@ -1638,7 +1645,7 @@ class Ma {
       e.forEach((r) => r.dispose()));
     const o = [];
     for (let r = 0; r < 3; r++) {
-      const a = new je(6700, 1100, 64, 5);
+      const a = new je(6700, 1100, 192, 24);
       a.rotateX(-Math.PI / 2);
       const c = a.attributes.position,
         h = [];
@@ -1770,7 +1777,11 @@ class Ma {
         this.shoreline,
         this.detailMesh,
       ])
-        c && (this.scene.remove(c), c.geometry.dispose(), c.material.dispose());
+        c &&
+          (this.scene.remove(c),
+          c.geometry.dispose(),
+          c.material.dispose(),
+          c.customDepthMaterial?.dispose());
       ((this.mapId = t.id), this.buildIslands());
     }
     const o = n ? 5006729 : t.sky,
@@ -1859,6 +1870,7 @@ class Ma {
         this.viewHeight,
         t,
         this.settings.reduceMotion,
+        (scene, camera) => this.upgrades.draw(scene, camera, e, true),
       ),
         (this.frameNumber = (this.frameNumber || 0) + 1),
         (this.needsRender = !1));
@@ -2023,7 +2035,7 @@ class Ma {
       ((this.particleMesh.instanceMatrix.needsUpdate = !0),
       (this.particleMesh.instanceColor.needsUpdate = !0)),
       this.upgrades?.update(e, o, t),
-      this.renderer.render(this.scene, this.camera),
+      this.upgrades.draw(this.scene, this.camera, e),
       (this.frameNumber = (this.frameNumber || 0) + 1),
       (this.needsRender = !1));
   }
@@ -4360,7 +4372,7 @@ g("#app").innerHTML = `
   <div class="header-actions"><span class="online"><i></i> ALL SYSTEMS ONLINE</span><span class="header-separator"></span><button class="icon-button" id="sound-button" aria-label="Mute audio">${A("sound")}</button><button class="icon-button" id="settings-button" aria-label="Open settings">${A("settings")}</button><button class="pilot-avatar" id="account-button" aria-label="Player account">P1<span></span></button></div>
 </header>
 <main class="page">
-  <section class="page-intro"><div><div class="eyebrow">A LITTLE ALTITUDE. A LOT OF FREEDOM.</div><h1 id="page-title">Ready for takeoff<span>?</span></h1></div><div class="session-info"><span class="live-dot"></span><span>FLIGHT DECK <b>/</b> <strong id="mode-label">STANDBY</strong></span><span class="session-tag">v2.9.0</span></div></section>
+  <section class="page-intro"><div><div class="eyebrow">A LITTLE ALTITUDE. A LOT OF FREEDOM.</div><h1 id="page-title">Ready for takeoff<span>?</span></h1></div><div class="session-info"><span class="live-dot"></span><span>FLIGHT DECK <b>/</b> <strong id="mode-label">STANDBY</strong></span><span class="session-tag">v3.0.0</span></div></section>
   <div class="progress-strip"><button id="profile-button"><span class="live-dot"></span><strong id="pilot-name">Spectre</strong><span id="save-state">Saved on this device</span></button><button id="rank-button"><span id="pilot-rank">CADET</span><strong id="pilot-rp">0 RP</strong></button><button id="campaign-button"><span>CAMPAIGN</span><strong id="campaign-count">0 / 100</strong></button><button id="skins-button"><span>HANGAR</span><strong id="skin-count">3 / 21 skins</strong></button></div>
   <div class="flight-layout">
     <section class="flight-stage" id="flight-stage" aria-label="Flight simulator">
@@ -4916,8 +4928,8 @@ function Rs(i) {
   return i === "low"
     ? "Lower resolution and no shadow maps for slower devices."
     : i === "high"
-      ? "Up to 3.84 million pixels, 2048px shadows and denser scenery. A dedicated GPU is recommended for a 16 GB PC."
-      : "A smooth balance of clarity and speed.";
+      ? "Photographic materials, volumetric clouds, water reflections, bloom and detailed shadows. Highest visual quality."
+      : "Photographic materials, soft lighting and clouds with reduced scenery and reflections.";
 }
 const te = (i) =>
   ({
@@ -4982,7 +4994,7 @@ function tn() {
   (Ee(
     "THE PILOT’S HANDBOOK",
     "A little flight school.",
-    `<p class="modal-description">An assisted combat flight game inspired by the original SKY CHROME Python game. Lift, drag and momentum now shape every manoeuvre.</p><div class="manual-sections"><div><span>01</span><div><h3>Find your line.</h3><p>Press V to switch between chase and a working 3D cockpit. Speed, altitude, attitude, radar, hull and energy instruments follow the simulation. Space mode uses inertial thrusters with no ground or aerodynamic stall. Use WASD or arrow keys to steer. Your jet builds momentum: climbs and hard turns bleed airspeed, while dives regain it. The instruments show actual simulated km/h and metres. G is load, V/S is climb rate, and AGL is clearance above the surface. Hold ${te(E.keys.brake)} to extend the airbrake. Below 195 km/h the wings begin losing lift; release the brake, level out and boost to recover. Sustained rolls also lose altitude. Hold ${te(E.keys.rollLeft)} / ${te(E.keys.rollRight)} to roll through 360°. Release to return smoothly to level flight; steering follows your bank while the aiming camera stays level. Follow the glowing green gates; each one earns 250 points and replenishes hull and boost.</p></div></div><div><span>02</span><div><h3>Own the engagement.</h3><p>Move the mouse to aim. Hold left click or Space to fire straight, converging cannon rounds. Aim at the target lead diamond; green sights indicate a nearby assisted shot. ${te(E.keys.missile)} launches a missile at your selected hostile. Each kill earns 500 points.</p></div></div><div><span>03</span><div><h3>Pick your pace.</h3><p>Hold Shift to engage afterburners. Watch your energy: empty tanks must recharge to 25%. Complete every displayed objective to win. Blue recon corridors require staying aligned at cruise speed until scanning completes; missed passes are replaced. Gold aircraft are marked aces. Terrain runs use lower gates. A fresh optional contract awards bonus points on victory. The time limit is a failure deadline, never a win condition. Press P or Escape to pause. Use Open Horizon for peaceful practice. Watch your clearance: hitting an island or the ocean destroys your aircraft. A collision with a hostile destroys both jets.</p></div></div></div><button class="secondary-button" id="manual-controls">${A("keys")} View & customize controls ${A("arrow")}</button>`,
+    `<p class="modal-description">An assisted combat flight game inspired by the original SKY CHROME Python game. Lift, drag and momentum now shape every manoeuvre.</p><div class="manual-sections"><div><span>01</span><div><h3>Find your line.</h3><p>Press V to switch between chase and a working 3D cockpit. Speed, altitude, attitude, radar, hull and energy instruments follow the simulation. Space mode uses inertial thrusters with no ground or aerodynamic stall. Use WASD or arrow keys to steer. Your jet builds momentum: climbs and hard turns bleed airspeed, while dives regain it. The instruments show actual simulated km/h and metres. G is load, V/S is climb rate, and AGL is clearance above the surface. Hold ${te(E.keys.brake)} to extend the airbrake. Below 195 km/h the wings begin losing lift; release the brake, level out and boost to recover. Sustained rolls also lose altitude. Hold ${te(E.keys.rollLeft)} / ${te(E.keys.rollRight)} to roll through 360°. Release to return smoothly to level flight; steering follows your bank while the aiming camera stays level. Follow the glowing green gates; each one earns 250 points and replenishes hull and boost.</p></div></div><div><span>02</span><div><h3>Own the engagement.</h3><p>Move the mouse to aim. Hold left click or Space to fire straight, converging cannon rounds. Aim at the target lead diamond; green sights indicate a nearby assisted shot. ${te(E.keys.missile)} launches a missile at your selected hostile. Each kill earns 500 points.</p></div></div><div><span>03</span><div><h3>Pick your pace.</h3><p>Hold Shift to engage afterburners. Watch your energy: empty tanks must recharge to 25%. Complete every displayed objective to win. Blue recon corridors require staying aligned at cruise speed until scanning completes; missed passes are replaced. Gold aircraft are marked aces. Terrain runs use lower gates. A fresh optional contract awards bonus points on victory. The time limit is a failure deadline, never a win condition. Press P or Escape to pause. Use Open Horizon for peaceful practice. Watch your clearance: hitting an island or the ocean destroys your aircraft. A collision with a hostile destroys both jets.</p></div></div></div><button class="secondary-button" id="manual-controls">${A("keys")} View & customize controls ${A("arrow")}</button><p class="modal-description"><a href="./credits.html" target="_blank" rel="noopener">Visual credits &amp; licenses</a></p>`,
   ),
     (g("#manual-controls").onclick = Xe));
 }
@@ -5596,7 +5608,7 @@ try {
 Object.defineProperty(window, "__SKYCHROME__", {
   value: {
     getState: () => ({
-      version: "2.9.0",
+      version: "3.0.0",
       vehicle: R?.jet.userData.vehicleId,
       cameraView: _e ? "cockpit" : "chase",
       instruments: R?.upgrades.cockpit.telemetry || null,
@@ -5700,6 +5712,18 @@ Object.defineProperty(window, "__SKYCHROME__", {
             mapId: R.mapId,
             textured: !!R.terrain.material.uniforms?.map?.value,
             terrainShader: R.terrain.material.name,
+            assets: { ...R.upgrades.assets },
+            cinematic: R.upgrades.cinematic.active || false,
+            volumetricClouds: R.upgrades.cinematic.cloudsActive || false,
+            planarReflection:
+              R.ocean.material.uniforms.reflectionStrength.value > 0.5,
+            photographedLighting: !!R.upgrades.lighting.outdoor,
+            shadowResolution: R.upgrades.shadowSun.shadow.mapSize.x,
+            renderBuffer: {
+              width: R.upgrades.cinematic.target.width,
+              height: R.upgrades.cinematic.target.height,
+              samples: R.upgrades.cinematic.target.samples,
+            },
             waterVertices: R.ocean.geometry.attributes.position.count,
             planetRelief: !!R.upgrades.planet.material.bumpMap,
             planetClouds: R.upgrades.planetClouds.visible,

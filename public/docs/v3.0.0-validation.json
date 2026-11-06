@@ -1,0 +1,160 @@
+{
+  "version": "3.0.0",
+  "date": "2026-11-06",
+  "runtime": "Node.js 24.22.1 / Chromium SwiftShader",
+  "unit": {
+    "passed": 121,
+    "failed": 0
+  },
+  "browser": {
+    "passed": 21,
+    "failed": 0,
+    "results": [
+      {
+        "name": "release, lobby, guest profile and preserved reward count",
+        "status": "passed"
+      },
+      {
+        "name": "select and render kestrel",
+        "status": "passed"
+      },
+      {
+        "name": "select and render thunderbolt",
+        "status": "passed"
+      },
+      {
+        "name": "select and render spectre",
+        "status": "passed"
+      },
+      {
+        "name": "paint is independent of airframe and persists",
+        "status": "passed"
+      },
+      {
+        "name": "campaign launch, firing, boosting and V cockpit",
+        "status": "passed"
+      },
+      {
+        "name": "pause freezes simulation and fullscreen exit pauses safely",
+        "status": "passed"
+      },
+      {
+        "name": "render atmospheric theatre azure",
+        "status": "passed"
+      },
+      {
+        "name": "render atmospheric theatre glacier",
+        "status": "passed"
+      },
+      {
+        "name": "render atmospheric theatre canyon",
+        "status": "passed"
+      },
+      {
+        "name": "render atmospheric theatre caldera",
+        "status": "passed"
+      },
+      {
+        "name": "space combat, opposing fleet and cockpit: xwing",
+        "status": "passed"
+      },
+      {
+        "name": "space combat, opposing fleet and cockpit: tie",
+        "status": "passed"
+      },
+      {
+        "name": "space wave selection and return to atmospheric fleet",
+        "status": "passed"
+      },
+      {
+        "name": "ranked launch retains ranked mission rules",
+        "status": "passed"
+      },
+      {
+        "name": "high quality renders with shadows and fixed resolution",
+        "status": "passed"
+      },
+      {
+        "name": "high space planet relief, separate clouds and orbital lighting",
+        "status": "passed"
+      },
+      {
+        "name": "return from space to high atmospheric rendering and resize",
+        "status": "passed"
+      },
+      {
+        "name": "balanced and low presets release expensive atmospheric effects",
+        "status": "passed"
+      },
+      {
+        "name": "mobile layout, touch firing and camera button",
+        "status": "passed"
+      },
+      {
+        "name": "no JavaScript, shader or HTTP errors",
+        "status": "passed"
+      }
+    ]
+  },
+  "services": {
+    "passed": 8,
+    "failed": 0,
+    "backend": "simulated",
+    "results": [
+      {
+        "name": "unconfigured accounts remain disabled; guest backup roundtrip works",
+        "status": "passed"
+      },
+      {
+        "name": "custom music persists in IndexedDB and restores built-in tracks",
+        "status": "passed"
+      },
+      {
+        "name": "real account SDK loads and email login submits PKCE to a simulated provider",
+        "status": "passed"
+      },
+      {
+        "name": "cloud profile loads, saves with revision and restores guest on sign-out (simulated backend)",
+        "status": "passed"
+      },
+      {
+        "name": "normal jet rotary cannon produces bounded audio during sustained fire",
+        "status": "passed"
+      },
+      {
+        "name": "space laser audio and separate ion-drive environment",
+        "status": "passed"
+      },
+      {
+        "name": "return from space to atmospheric flight preserves the current session",
+        "status": "passed"
+      },
+      {
+        "name": "no service integration JavaScript errors",
+        "status": "passed"
+      }
+    ]
+  },
+  "portrait_followup": {
+    "passed": 2,
+    "failed": 0,
+    "results": [
+      {
+        "name": "mobile layout, touch firing and camera button",
+        "status": "passed"
+      },
+      {
+        "name": "no JavaScript, shader or HTTP errors",
+        "status": "passed"
+      }
+    ]
+  },
+  "errors": [],
+  "limits": [
+    "No physical gaming-PC performance measurement.",
+    "Live OAuth/email delivery remains unverified; account requests are simulated.",
+    "Cannon sound is synthesized. Terrain and asteroid materials include licensed photographic assets; vehicle geometry and planet textures remain procedural.",
+    "High water reflections do not include the separately composited volumetric cloud pass."
+  ],
+  "retry": "An initial parallel service test timed out during startup. The full sequential rerun passed."
+}

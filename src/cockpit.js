@@ -56,6 +56,30 @@ export class Cockpit {
     const lip = new T.Mesh(new T.BoxGeometry(3.25, 0.09, 0.8), this.dark);
     lip.position.set(0, -0.43, -2.9);
     this.group.add(lip);
+    // Raised display bezel, fasteners and physical controls catch the cabin light.
+    const bezelParts = [];
+    const bezel = (g, x, y, z) => {
+      g.translate(x, y, z);
+      bezelParts.push(g);
+    };
+    for (const side of [-1, 1]) {
+      bezel(new T.BoxGeometry(0.045, 0.72, 0.045), side * 1.28, -0.78, -2.48);
+      bezel(
+        new T.BoxGeometry(2.6, 0.035, 0.045),
+        0,
+        -0.78 + side * 0.36,
+        -2.48,
+      );
+      for (let i = 0; i < 5; i++) {
+        const knob = new T.CylinderGeometry(0.025, 0.025, 0.035, 12);
+        knob.rotateX(Math.PI / 2);
+        bezel(knob, side * (0.3 + i * 0.19), -1.17, -2.44);
+      }
+    }
+    const controls = new T.Mesh(T.mergeGeometries(bezelParts), this.trim);
+    this.group.add(controls);
+    this.bezel = controls;
+    bezelParts.forEach((g) => g.dispose());
     for (const side of [-1, 1]) {
       const console = new T.Mesh(new T.BoxGeometry(0.56, 0.4, 2.8), this.dark);
       console.position.set(side * 1.25, -1.15, -0.6);
@@ -149,6 +173,8 @@ export class Cockpit {
     // Preserve the display aspect ratio in portrait and keep it above the sticks.
     this.display.scale.y = widthScale;
     this.display.position.y = portrait ? -0.39 : -0.78;
+    this.bezel.scale.y = widthScale;
+    this.bezel.position.y = this.display.position.y + 0.78 * widthScale;
     this.dash.scale.y = widthScale;
     this.dash.position.y = portrait ? -0.45 : -1.02;
     this.lip.position.y = portrait ? -0.22 : -0.43;

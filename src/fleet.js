@@ -73,9 +73,35 @@ function wing(points, material, thickness = 0.16) {
   return new T.Mesh(g, material);
 }
 function loft(stations, material) {
+  // Smooth station interpolation preserves each airframe's proportions while
+  // removing the six straight fuselage sections of the earlier models.
+  const original = stations;
+  stations = [];
+  const cubic = (a, b, c, d, t) =>
+    0.5 *
+    (2 * b +
+      (-a + c) * t +
+      (2 * a - 5 * b + 4 * c - d) * t * t +
+      (-a + 3 * b - 3 * c + d) * t * t * t);
+  for (let i = 0; i < original.length - 1; i++)
+    for (let j = 0; j < 4; j++) {
+      const t = j / 4,
+        p0 = original[Math.max(0, i - 1)],
+        p1 = original[i],
+        p2 = original[i + 1],
+        p3 = original[Math.min(original.length - 1, i + 2)];
+      stations.push(
+        p1.map((_, k) =>
+          k
+            ? Math.max(0.018, cubic(p0[k], p1[k], p2[k], p3[k], t))
+            : cubic(p0[k], p1[k], p2[k], p3[k], t),
+        ),
+      );
+    }
+  stations.push(original.at(-1));
   const pos = [],
     indices = [],
-    segments = 24;
+    segments = 40;
   for (const [z, w, h] of stations)
     for (let j = 0; j < segments; j++) {
       const a = (j / segments) * Math.PI * 2;
@@ -105,9 +131,9 @@ export function createVehicle(id, paint, textures) {
   root.name = id;
   const metal = new T.MeshPhysicalMaterial({
     color: paint.body,
-    metalness: 0.55,
-    roughness: 0.36,
-    clearcoat: 0.6,
+    metalness: 0.22,
+    roughness: 0.42,
+    clearcoat: 0.28,
     clearcoatRoughness: 0.27,
     map: textures?.panels || null,
     roughnessMap: textures?.paintRoughness || null,
@@ -128,14 +154,32 @@ export function createVehicle(id, paint, textures) {
     roughness: 0.3,
   });
   const glass = new T.MeshPhysicalMaterial({
-    color: 0x193a4d,
-    metalness: 0.35,
-    roughness: 0.12,
+    color: 0x809eaa,
+    metalness: 0,
+    roughness: 0.08,
     clearcoat: 1,
+    transparent: id !== "tie",
+    opacity: id === "tie" ? 1 : 0.67,
+    depthWrite: id === "tie",
+    ior: 1.5,
   });
   const glow = new T.MeshBasicMaterial({
     color: id === "tie" ? 0x78ff92 : 0x79caff,
     toneMapped: false,
+    transparent: true,
+    opacity: 0.86,
+    depthWrite: false,
+    blending: 2,
+  });
+  glow.color.multiplyScalar(3.2);
+  const heatMetal = new T.MeshStandardMaterial({
+    color: 0x706051,
+    metalness: 0.85,
+    roughness: 0.46,
+  });
+  const pilotMaterial = new T.MeshStandardMaterial({
+    color: 0x3f4940,
+    roughness: 0.86,
   });
   const add = (g, m, x = 0, y = 0, z = 0) => {
     const o = new T.Mesh(g, m);
@@ -168,7 +212,7 @@ export function createVehicle(id, paint, textures) {
     return o;
   };
   const nozzle = (x, y, z, r = 0.55) => {
-    tube(chrome, x, y, z, r, r * 0.92, 0.7);
+    tube(heatMetal, x, y, z, r, r * 0.92, 0.7);
     tube(dark, x, y, z + 0.39, r * 0.8, r * 0.8, 0.05);
     const flame = tube(glow, x, y, z + 0.6, r * 0.61, 0.05, 1.2);
     flame.name = "innerFlame";
@@ -176,13 +220,49 @@ export function createVehicle(id, paint, textures) {
       const a = (j / 12) * Math.PI * 2;
       box(dark, x + Math.cos(a) * r, y + Math.sin(a) * r, z, 0.025, 0.04, 0.65);
     }
+    for (let j = 0; j < 3; j++) {
+      const ring = add(
+        new T.TorusGeometry(r * (0.76 - j * 0.11), 0.025, 5, 24),
+        heatMetal,
+        x,
+        y,
+        z + 0.1 - j * 0.13,
+      );
+    }
   };
   const canopy = (x, y, z, w, h, d) => {
-    const o = add(new T.SphereGeometry(1, 24, 16), glass, x, y, z);
+    const o = add(new T.SphereGeometry(1, 40, 28), glass, x, y, z);
     o.scale.set(w, h, d);
     const frame = add(new T.TorusGeometry(w, 0.045, 5, 32), dark, x, y, z);
     frame.rotation.x = Math.PI / 2;
     frame.scale.y = d / w;
+    for (const end of [-1, 1]) {
+      const arch = add(
+        new T.TorusGeometry(w * 0.86, 0.027, 5, 28, Math.PI),
+        metal,
+        x,
+        y - 0.08,
+        z + end * d * 0.52,
+      );
+      arch.scale.y = h / w;
+    }
+    box(dark, x, y - 0.2, z + 0.45, w * 0.85, h * 0.9, 0.38);
+    const helmet = add(
+      new T.SphereGeometry(0.21, 20, 12),
+      pilotMaterial,
+      x,
+      y + 0.19,
+      z + 0.1,
+    );
+    const visor = add(
+      new T.SphereGeometry(0.215, 16, 10, 0, Math.PI),
+      dark,
+      x,
+      y + 0.2,
+      z + 0.08,
+    );
+    visor.rotation.y = Math.PI;
+    box(pilotMaterial, x, y - 0.13, z + 0.13, 0.36, 0.4, 0.28);
   };
   const addWing = (pts, y = 0) => {
     const o = wing(pts, metal);
@@ -197,7 +277,7 @@ export function createVehicle(id, paint, textures) {
       glass,
       0,
       0,
-      -1.4,
+      -1.84,
     );
     front.rotation.x = Math.PI / 2;
     const ring = add(
@@ -205,7 +285,7 @@ export function createVehicle(id, paint, textures) {
       chrome,
       0,
       0,
-      -1.48,
+      -1.91,
     );
     for (let j = 0; j < 8; j++) {
       const a = (j * Math.PI) / 4;
@@ -213,7 +293,7 @@ export function createVehicle(id, paint, textures) {
         chrome,
         Math.cos(a) * 0.72,
         Math.sin(a) * 0.72,
-        -1.55,
+        -1.94,
         1.5,
         0.055,
         0.05,
@@ -388,6 +468,9 @@ export function createVehicle(id, paint, textures) {
       for (const x of attack ? [3.4, 5.5, 6.8] : [3.5, 5.2]) {
         box(dark, side * x, -0.35, 1, 0.15, 0.5, 1.2);
         tube(chrome, side * x, -0.72, 0.3, 0.1, 0.16, 2.8);
+        tube(dark, side * x, -0.72, -1.35, 0.11, 0, 0.5);
+        box(dark, side * x, -0.72, 1.45, 0.54, 0.035, 0.35);
+        box(dark, side * x, -0.72, 1.45, 0.035, 0.54, 0.35);
       }
       const aileron = box(
         metal,
@@ -447,11 +530,16 @@ export function createVehicle(id, paint, textures) {
       : mesh.geometry.clone();
     g.applyMatrix4(mesh.matrix);
     const uv = [];
-    for (let j = 0; j < g.attributes.position.count; j++)
-      uv.push(
-        g.attributes.position.getX(j) * 0.2,
-        g.attributes.position.getZ(j) * 0.15,
-      );
+    for (let j = 0; j < g.attributes.position.count; j++) {
+      const p = g.attributes.position,
+        n = g.attributes.normal;
+      const nx = Math.abs(n.getX(j)),
+        ny = Math.abs(n.getY(j)),
+        nz = Math.abs(n.getZ(j));
+      if (ny >= nx && ny >= nz) uv.push(p.getX(j) * 0.2, p.getZ(j) * 0.15);
+      else if (nx >= nz) uv.push(p.getZ(j) * 0.15, p.getY(j) * 0.25);
+      else uv.push(p.getX(j) * 0.2, p.getY(j) * 0.25);
+    }
     g.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
     if (!groups.has(mesh.material)) groups.set(mesh.material, []);
     groups.get(mesh.material).push(g);

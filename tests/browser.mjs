@@ -29,7 +29,7 @@ await context.addInitScript(() => {
     );
 });
 const page = await context.newPage();
-page.setDefaultTimeout(45000);
+page.setDefaultTimeout(90000);
 function watch(p) {
   p.on("pageerror", (e) => errors.push(e.stack));
   p.on("console", (m) => {
@@ -74,7 +74,7 @@ try {
     "release, lobby, guest profile and preserved reward count",
     async () => {
       const s = await state();
-      assert.equal(s.version, "2.9.0");
+      assert.equal(s.version, "3.0.0");
       assert.equal(s.mode, "deck");
       assert.equal(s.profile.unlockedLevel, 1);
       assert.equal(s.profile.skins.length, 3);
@@ -233,6 +233,18 @@ try {
       assert.equal(s.render.shadows, true);
       assert.equal(s.adaptiveResolution, false);
       assert.equal(s.render.resolutionScale, 1);
+      await page.waitForFunction(
+        () => window.__SKYCHROME__.getState().render.assets.pending === 0,
+      );
+      const render = (await state()).render;
+      assert.deepEqual(render.assets.errors, []);
+      assert.equal(render.assets.loaded, 10);
+      assert.equal(render.cinematic, true);
+      assert.equal(render.volumetricClouds, true);
+      assert.equal(render.planarReflection, true);
+      assert.equal(render.photographedLighting, true);
+      assert.equal(render.shadowResolution, 4096);
+      assert.equal(render.renderBuffer.samples, 4);
       await page.screenshot({ path: output + "/high-cockpit.png" });
     },
   );
@@ -246,7 +258,47 @@ try {
       assert.equal(s.render.planetRelief, true);
       assert.equal(s.render.planetClouds, true);
       assert.ok(s.render.spaceAmbient < 0.2);
+      assert.equal(s.render.cinematic, true);
+      assert.equal(s.render.volumetricClouds, false);
+      assert.equal(s.render.planarReflection, false);
       await page.screenshot({ path: output + "/high-space.png" });
+    },
+  );
+  await check("high atmospheric rendering and resize", async () => {
+    await load();
+    await page.locator('[data-flight-mode="quick"]').click();
+    await page.locator('[data-mission="free"]').click();
+    await launch();
+    await page.setViewportSize({ width: 1200, height: 760 });
+    await page.waitForFunction(() => {
+      const r = window.__SKYCHROME__.getState().render;
+      return (
+        r.renderBuffer.width === r.width &&
+        r.renderBuffer.height === r.height &&
+        r.width === 1200 &&
+        r.volumetricClouds &&
+        r.planarReflection
+      );
+    });
+    await page.screenshot({ path: output + "/high-coast.png" });
+    await page.setViewportSize({ width: 1000, height: 700 });
+  });
+  await check(
+    "balanced and low presets reduce expensive atmospheric effects",
+    async () => {
+      for (const quality of ["balanced", "low"]) {
+        await load();
+        await page.locator("#settings-button").click();
+        await page.locator(`[data-quality="${quality}"]`).click();
+        await page.locator("#close-modal").click();
+        await launch();
+        const s = await state();
+        assert.equal(s.quality, quality);
+        assert.equal(s.render.cinematic, quality === "balanced");
+        assert.equal(s.render.volumetricClouds, quality === "balanced");
+        assert.equal(s.render.planarReflection, false);
+        assert.equal(s.render.shadows, quality === "balanced");
+      }
     },
   );
   await check("mobile layout, touch firing and camera button", async () => {

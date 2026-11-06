@@ -1,6 +1,14 @@
 import * as T from "./three.js";
 import { createVehicle, disposeVehicle, AIRCRAFT } from "./fleet.js";
 import { Cockpit } from "./cockpit.js";
+import { CinematicRenderer } from "./cinematic.js";
+import { WaterReflection } from "./reflections.js";
+import { orbitalStation } from "./scenery.js";
+import {
+  loadLighting,
+  visualAssets,
+  photographicTerrain,
+} from "./visual-assets.js";
 
 import {
   hash,
@@ -15,6 +23,7 @@ import {
 export class UpgradeRenderer {
   constructor(owner, textures, paintFor) {
     this.owner = owner;
+    this.assets = visualAssets;
     this.textures = textures;
     this.paintFor = paintFor;
     this.cockpit = new Cockpit(owner.camera);
@@ -25,10 +34,10 @@ export class UpgradeRenderer {
     this.shadowSun.castShadow = true;
     const shadow = this.shadowSun.shadow;
     shadow.mapSize.set(2048, 2048);
-    shadow.camera.left = shadow.camera.bottom = -100;
-    shadow.camera.right = shadow.camera.top = 100;
+    shadow.camera.left = shadow.camera.bottom = -360;
+    shadow.camera.right = shadow.camera.top = 360;
     shadow.camera.near = 1;
-    shadow.camera.far = 900;
+    shadow.camera.far = 1800;
     shadow.bias = -0.00015;
     shadow.normalBias = 0.18;
     shadow.radius = 3;
@@ -46,6 +55,41 @@ export class UpgradeRenderer {
     upgradeWater(owner.ocean.material);
     this.configure(owner.settings);
     this.enhanceTerrain();
+    this.cinematic = new CinematicRenderer(owner);
+    this.reflection = new WaterReflection(owner);
+    this.lighting = {};
+    loadLighting(owner, (name, environment) => {
+      this.lighting[name] = environment;
+      if (name === "hangar")
+        owner.hangar.scene.environment = environment.texture;
+    });
+    // The hangar's key light now casts a real aircraft shadow onto its floor.
+    const key = owner.hangar.scene.children.find((o) => o.isDirectionalLight);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    Object.assign(key.shadow.camera, {
+      left: -18,
+      right: 18,
+      top: 18,
+      bottom: -18,
+      near: 1,
+      far: 90,
+    });
+    key.shadow.normalBias = 0.035;
+    owner.hangar.scene.traverse((o) => {
+      if (o.isMesh) o.receiveShadow = true;
+    });
+    owner.hangar.scene.environmentIntensity = 0.65;
+    const lights = owner.hangar.scene.children.filter(
+      (o) => o.isDirectionalLight,
+    );
+    lights[0].color.setHex(0xfff1dc);
+    lights[0].intensity = 2.1;
+    lights[1].color.setHex(0xb5c8df);
+    lights[1].intensity = 0.65;
+    lights[2].intensity = 0.45;
+    owner.hangar.scene.children.find((o) => o.isHemisphereLight).intensity =
+      0.65;
   }
   enhanceTerrain() {
     const r = this.owner;
@@ -55,10 +99,25 @@ export class UpgradeRenderer {
     const material = terrainMaterial(previous, r.worldDistance, r.mapId);
     r.terrain.material = material;
     r.terrain.receiveShadow = true;
+    r.terrain.castShadow = true;
+    const depth = new T.MeshDepthMaterial({ depthPacking: 3201 });
+    depth.onBeforeCompile = (shader) => {
+      shader.uniforms.worldDistance = r.worldDistance;
+      shader.vertexShader =
+        "uniform float worldDistance;attribute float islandZ;\n" +
+        shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\ntransformed.z+=mod(mod(islandZ+worldDistance+3400.,3900.)+3900.,3900.)-3400.;",
+      );
+    };
+    depth.customProgramCacheKey = () => "wrapped-terrain-shadow-v3";
+    r.terrain.customDepthMaterial = depth;
     previous.dispose();
   }
   configure(settings) {
     this.settings = settings;
+    this.cinematic?.configure(settings);
     const r = this.owner,
       high = settings.quality === "high";
     const segments = high ? 192 : settings.quality === "low" ? 48 : 128;
@@ -71,7 +130,7 @@ export class UpgradeRenderer {
     this.planetClouds.visible = settings.quality !== "low";
     this.stars.count = high ? 1400 : settings.quality === "low" ? 700 : 1100;
     r.renderer.shadowMap.enabled = settings.quality !== "low";
-    const size = high ? 2048 : 1024;
+    const size = high ? 4096 : 2048;
     if (this.shadowSun.shadow.mapSize.x !== size) {
       this.shadowSun.shadow.mapSize.set(size, size);
       this.shadowSun.shadow.map?.dispose();
@@ -153,15 +212,18 @@ export class UpgradeRenderer {
       r.cloudMesh,
     ])
       object.visible = !space;
+    r.cloudMesh.visible = !space && !this.cinematic?.enabled;
     this.spaceGroup.visible = space;
     r.scene.background = space ? this.spaceBackground : null;
     r.scene.fog.density = space ? 0 : this.fogDensity || 0.00075;
-    this.shadowSun.intensity = space ? 2.2 : 1.8;
-    r.hemisphere.intensity = space ? 0.16 : 0.95;
-    r.scene.environmentIntensity = space ? 0.16 : 0.65;
-    r.sunLight.intensity = space ? 2.4 : 1.1;
+    this.shadowSun.intensity = space ? 2.2 : 2.0;
+    r.hemisphere.intensity = space ? 0.12 : 0.35;
+    r.scene.environmentIntensity = space ? 0.12 : 0.3;
+    if (!space && this.lighting?.outdoor)
+      r.scene.environment = this.lighting.outdoor.texture;
+    r.sunLight.intensity = space ? 1.8 : 0.2;
     if (space) {
-      r.sunLight.position.set(-0.62, 0.38, 0.68).normalize();
+      r.sunLight.position.set(-0.8, 0.45, 0.25).normalize();
       r.sunLight.color.setHex(0xffecd5);
     }
     r.projectileBatches[0].material.color.set(
@@ -203,7 +265,7 @@ export class UpgradeRenderer {
     }
     this.stars.frustumCulled = false;
     this.spaceGroup.add(this.stars);
-    const maps = planetTextures();
+    const maps = planetTextures(2048, 1024);
     this.planet = new T.Mesh(
       new T.SphereGeometry(850, 96, 64),
       new T.MeshStandardMaterial({
@@ -302,10 +364,11 @@ export class UpgradeRenderer {
     this.rocks = new T.InstancedMesh(
       rockGeometry,
       new T.MeshStandardMaterial({
-        color: 0xb7aaa0,
-        map: surfaceTextures("caldera").rock,
-        bumpMap: surfaceTextures("caldera").rock,
-        bumpScale: 0.16,
+        color: 0x817b73,
+        map: photographicTerrain("caldera").rock,
+        normalMap: photographicTerrain("caldera").normal,
+        normalScale: new T.Vector2(0.65, 0.65),
+        roughnessMap: photographicTerrain("caldera").rough,
         roughness: 0.94,
       }),
       90,
@@ -320,30 +383,7 @@ export class UpgradeRenderer {
     );
     sun.position.set(-2400, 1500, 2600);
     this.spaceGroup.add(sun);
-    const station = new T.Group();
-    station.position.set(-950, 200, -2400);
-    const ring = new T.Mesh(
-      new T.TorusGeometry(120, 10, 8, 64),
-      new T.MeshStandardMaterial({
-        color: 0x87939e,
-        metalness: 0.7,
-        roughness: 0.45,
-      }),
-    );
-    station.add(ring);
-    for (const x of [-1, 1]) {
-      const panel = new T.Mesh(
-        new T.BoxGeometry(150, 45, 4),
-        new T.MeshStandardMaterial({
-          color: 0x354965,
-          metalness: 0.6,
-          roughness: 0.5,
-        }),
-      );
-      panel.position.set(x * 185, 0, 0);
-      station.add(panel);
-    }
-    this.spaceGroup.add(station);
+    this.spaceGroup.add(orbitalStation());
   }
   prepare(state, deck) {
     const r = this.owner;
@@ -367,7 +407,7 @@ export class UpgradeRenderer {
     });
     this.shadowSun.position
       .copy(r.sunLight.position)
-      .multiplyScalar(350)
+      .multiplyScalar(900)
       .add(new T.Vector3(p.x, p.y, 0));
     this.shadowSun.target.position.set(p.x, 0, 0);
     this.shadowSun.target.updateMatrixWorld();
@@ -392,5 +432,18 @@ export class UpgradeRenderer {
       }
       this.rocks.instanceMatrix.needsUpdate = true;
     }
+  }
+  draw(scene, camera, state, hangar = false) {
+    if (!this.cinematic.enabled) this.reflection.render(false);
+    this.cinematic.draw(scene, camera, {
+      space: this.space,
+      hangar,
+      time: state.time,
+      distance: state.distance,
+      beforeScene: () =>
+        this.reflection.render(
+          !hangar && !this.space && this.settings.quality === "high",
+        ),
+    });
   }
 }

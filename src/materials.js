@@ -1,4 +1,5 @@
 import * as T from "./three.js";
+import { photographicTerrain, photographicBlend } from "./visual-assets.js";
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const smooth = (a, b, x) => {
@@ -121,12 +122,13 @@ export function surfaceTextures(mapId = "azure") {
 
 export function terrainMaterial(previous, worldDistance, mapId) {
   const maps = surfaceTextures(mapId);
+  const photo = photographicTerrain(mapId);
   const mat = new T.MeshStandardMaterial({
     roughness: 0.9,
     map: maps.ground,
     metalness: 0,
   });
-  mat.name = "Terrain · triplanar rock / ground / wet shoreline";
+  mat.name = "Terrain · photographic PBR / triplanar / wet shoreline";
   // Keep the existing palette interface used by the four map selectors.
   mat.uniforms = { ...previous.uniforms, map: { value: maps.ground } };
   mat.onBeforeCompile = (shader) => {
@@ -135,6 +137,23 @@ export function terrainMaterial(previous, worldDistance, mapId) {
       rockMap: { value: maps.rock },
       groundMap: { value: maps.ground },
       shoreColor: { value: maps.shore },
+      photoRock: { value: photo.rock },
+      photoGround: { value: photo.ground },
+      photoNormal: { value: photo.normal },
+      photoRough: { value: photo.rough },
+      photoSand: { value: photo.sand },
+      photoBlend: photographicBlend,
+      surfaceTint: {
+        value: new T.Color(
+          ...(mapId === "canyon"
+            ? [1.25, 0.72, 0.42]
+            : mapId === "caldera"
+              ? [0.38, 0.4, 0.36]
+              : mapId === "azure"
+                ? [0.7, 0.78, 0.7]
+                : [1, 1, 1]),
+        ),
+      },
     });
     shader.vertexShader =
       "uniform float worldDistance; attribute float islandZ; varying vec3 surfacePosition; varying vec3 surfaceNormal;\n" +
@@ -150,6 +169,7 @@ export function terrainMaterial(previous, worldDistance, mapId) {
     );
     shader.fragmentShader =
       `uniform sampler2D groundMap; uniform sampler2D rockMap; uniform vec3 shoreColor;
+      uniform sampler2D photoRock, photoGround, photoNormal, photoRough, photoSand;uniform float photoBlend;uniform vec3 surfaceTint;
       varying vec3 surfacePosition; varying vec3 surfaceNormal;
       vec4 triplanar(sampler2D tex, vec3 p, vec3 w) {
         return texture2D(tex, p.yz) * w.x + texture2D(tex, p.xz) * w.y + texture2D(tex, p.xy) * w.z;
@@ -161,11 +181,13 @@ export function terrainMaterial(previous, worldDistance, mapId) {
       weights /= max(dot(weights, vec3(1.)), .001);
       vec4 rock = triplanar(rockMap, surfacePosition * .038, weights);
       vec4 ground = texture2D(groundMap, surfacePosition.xz * .07);
+      rock.rgb=mix(rock.rgb,triplanar(photoRock,surfacePosition*.06,weights).rgb*surfaceTint,photoBlend);
+      ground.rgb=mix(ground.rgb,texture2D(photoGround,surfacePosition.xz*.07).rgb*surfaceTint*.7,photoBlend);
       float cliff = 1. - smoothstep(.52, .86, normalize(surfaceNormal).y);
       vec4 surface = mix(ground, rock, cliff);
       float shore = 1. - smoothstep(.5, 7., surfacePosition.y);
       float wet = 1. - smoothstep(-1., 2.8, surfacePosition.y);
-      vec3 sand = shoreColor * (.68 + ground.a * .5);
+      vec3 sand = mix(shoreColor * (.68 + ground.a * .5),texture2D(photoSand,surfacePosition.xz*.09).rgb*surfaceTint,photoBlend);
       float macro = texture2D(groundMap, surfacePosition.xz * .003).a;
       diffuseColor.rgb *= mix(surface.rgb, sand, shore) * (.82 + macro * .36) * (1. - wet * .32);
       float relief = mix(ground.a * .22, rock.a * .8, cliff) * (1. - shore * .6);
@@ -175,7 +197,7 @@ export function terrainMaterial(previous, worldDistance, mapId) {
       "#include <roughnessmap_fragment>",
       `
       #include <roughnessmap_fragment>
-      roughnessFactor = mix(clamp(.82 + surface.a * .15, .6, 1.), .28, wet);
+      roughnessFactor = mix(mix(clamp(.82 + surface.a * .15, .6, 1.),clamp(triplanar(photoRough,surfacePosition*.06,weights).g,.35,1.),photoBlend*cliff), .28, wet);
     `,
     );
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -186,10 +208,15 @@ export function terrainMaterial(previous, worldDistance, mapId) {
       vec3 r1 = cross(sigmaY, normal), r2 = cross(normal, sigmaX);
       float determinant = dot(sigmaX, r1);
       normal = normalize(abs(determinant) * normal - sign(determinant) * (dFdx(relief) * r1 + dFdy(relief) * r2));
+      vec3 nx=texture2D(photoNormal,surfacePosition.yz*.06).xyz*2.-1.;
+      vec3 ny=texture2D(photoNormal,surfacePosition.xz*.06).xyz*2.-1.;
+      vec3 nz=texture2D(photoNormal,surfacePosition.xy*.06).xyz*2.-1.;
+      vec3 perturb=vec3(0.,nx.x,nx.y)*weights.x+vec3(ny.x,0.,ny.y)*weights.y+vec3(nz.x,nz.y,0.)*weights.z;
+      normal=normalize(normal+mat3(viewMatrix)*perturb*photoBlend*(.18+cliff*.4));
     `,
     );
   };
-  mat.customProgramCacheKey = () => "skychrome-triplanar-2.9";
+  mat.customProgramCacheKey = () => "skychrome-photographic-pbr-3.0";
   return mat;
 }
 

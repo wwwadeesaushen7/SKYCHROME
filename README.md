@@ -1,4 +1,4 @@
-# SKYCHROME v2.9.0
+# SKYCHROME v3.0.0
 
 Editable continuation of the v2.7.0 browser game, with three distinct aircraft,
 independent paint selection, X-wing/TIE space combat, working first-person
@@ -6,8 +6,8 @@ cockpits, and upgraded graphics.
 
 ## Downloads
 
-- [Download the ready-to-host v2.9.0 website ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v2.9.0-website.zip)
-- [Download the editable v2.9.0 source ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v2.9.0-source.zip)
+- [Download the ready-to-host v3.0.0 website ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v3.0.0-website.zip)
+- [Download the editable v3.0.0 source ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v3.0.0-source.zip)
 - [Archive SHA-256 checksums](artifacts/checksums.json)
 
 The editable project is also available directly in this repository. The website
@@ -54,6 +54,33 @@ certify performance on a physical gaming PC.
 
 ## New features
 
+### v3.0.0 visual upgrade
+
+- **Photographic surfaces:** bundled rock, grass, sand and ice textures, rock/ice
+  normal and roughness maps, slope blending and wet shoreline shading. Images
+  are local assets, so gameplay does not depend on a texture CDN.
+- **Lighting:** HDR environment lighting in the hangar and outdoors, with
+  daylight white balance, terrain and scenery shadows, and 4096px sun shadows
+  on High. Aircraft have smoother fuselages, transparent canopies with pilots,
+  detailed nozzles, corrected panel UVs and pointed missiles with fins.
+- **Atmosphere:** depth-aware volumetric clouds, moving waves and distorted
+  planar water reflections on High. Trees have trunks and layered foliage;
+  ground rocks have more detailed silhouettes.
+- **Rendering:** an HDR pipeline with four-sample antialiasing, soft bloom,
+  depth-based contact shading, filmic tone mapping and subtle color grading.
+  Balanced reduces cloud samples and disables planar reflections; Low bypasses
+  the extra render passes and shadow maps. Unsupported HDR render targets also
+  bypass the extra passes.
+- **Space:** a 2K procedural planet, photographic asteroid materials, stronger
+  day/night lighting, engine bloom and a detailed orbital station with solar
+  cell grids, spokes, habitat modules and illuminated windows.
+- **Cockpit:** physical display bezels, fasteners and control knobs around the
+  existing working instruments. **V** still switches camera views.
+
+This remains a Three.js/WebGL browser game. The upgrade does not use Unreal
+Engine, ray tracing, Nanite or Lumen. [Visual credits](public/credits.html) and
+[third-party notices](THIRD_PARTY.md) document the licensed assets.
+
 ### v2.9.0 sound, aiming and materials
 
 - **Normal jet cannon:** a dry rotary burst with rapid pressure cracks, a deeper
@@ -92,8 +119,7 @@ certify performance on a physical gaming PC.
   hull, energy and missile readiness. V can be remapped in Controls.
 - **Graphics:** denser terrain meshes, surface relief, multi-layer water
   ripples, more clouds and ground details, physically based aircraft materials,
-  shadow maps, antialiasing, and higher pixel budgets. The procedural art is
-  original geometry and texture work, not photographic scans.
+  shadow maps, antialiasing, and higher pixel budgets. Vehicle geometry remains procedural; v3.0 adds licensed photographic materials.
 
 Campaign levels, ranked progression, rewards, four atmospheric maps, player
 backups, guest/account separation, music imports, mobile controls, fullscreen
@@ -104,7 +130,7 @@ recovery, and existing graphics options remain available.
 High targets a 16 GB RAM PC with a capable GPU and hardware-accelerated browser.
 RAM alone does not determine frame rate. Low, Balanced and High use budgets of
 0.48, 1.44 and 3.84 million pixels. Balanced and High enable shadow maps; High
-uses a 2048px shadow map. Automatic resolution remains opt-in, and selecting a
+uses a 4096px sun shadow map and planar water reflections. Automatic resolution remains opt-in, and selecting a
 preset restores fixed resolution. Use Low or Boost FPS on slower devices.
 
 ## Accounts and saves
@@ -130,6 +156,10 @@ Private credentials must never go in website files.
 | `src/cockpit.js` | 3D cockpit frames and live instruments |
 | `src/world.js` | Upgraded scenery, shadows, orbital scene and vehicle rendering |
 | `src/materials.js` | Terrain/planet textures, surface relief, sky and water shaders |
+| `src/cinematic.js` | HDR, antialiasing, bloom, contact shading and volumetric clouds |
+| `src/reflections.js` | Planar water reflection and oblique clipping |
+| `src/visual-assets.js` | Local texture loading, HDR decoding and asset status |
+| `src/scenery.js` | Merged trees, rocks and orbital station geometry |
 | `src/cannon-audio.js` | Original rotary-cannon sample synthesis |
 | `src/enemy-aim.js` | Predictive hostile fire and bounded dispersion |
 | `src/game.js` | Existing UI, renderer, audio, touch, fullscreen and account integration |

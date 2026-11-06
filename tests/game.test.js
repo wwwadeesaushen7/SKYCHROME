@@ -1,5 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import { createHash } from "node:crypto";
+import { decodeRadiance } from "../src/visual-assets.js";
+import { groundGeometry, orbitalStation } from "../src/scenery.js";
 import {
   ea as Simulation,
   as as quickMissions,
@@ -30,6 +34,85 @@ import { normalizeKeys } from "../src/controls.js";
 import { enemyFiringSolution } from "../src/enemy-aim.js";
 import { cannonSamples } from "../src/cannon-audio.js";
 import { planetTextures } from "../src/materials.js";
+
+test("Radiance RLE decodes known HDR intensities and rejects corrupt scanlines", () => {
+  const header = Buffer.from(
+    "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 8\n",
+  );
+  const scan = [2, 2, 0, 8, 136, 128, 136, 64, 136, 32, 136, 130];
+  const decode = (tail) => {
+    const b = Buffer.concat([header, Buffer.from(tail)]);
+    return decodeRadiance(
+      b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength),
+    );
+  };
+  const result = decode(scan);
+  assert.equal(result.width, 8);
+  assert.equal(result.height, 1);
+  for (let i = 0; i < 8; i++)
+    assert.deepEqual([...result.data.slice(i * 4, i * 4 + 4)], [2, 1, 0.5, 1]);
+  assert.throws(() => decode(scan.slice(0, -1)), /Truncated/);
+  assert.throws(() => decode([2, 2, 0, 8, 137, 128]), /overflow/);
+  assert.throws(() => decode([2, 2, 0, 8, 8, 128]), /Truncated/);
+  assert.throws(() => decode([2, 2, 0, 9]), /scanline/);
+});
+test("bundled HDR environments decode with finite, unclipped light intensities", () => {
+  for (const name of ["sky-dawn.hdr", "hangar.hdr"]) {
+    const b = fs.readFileSync(
+      new URL("../public/textures/" + name, import.meta.url),
+    );
+    const result = decodeRadiance(
+      b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength),
+    );
+    assert.equal(result.width, 1024);
+    assert.equal(result.height, 512);
+    let peak = 0;
+    for (const value of result.data) {
+      assert.ok(Number.isFinite(value) && value >= 0);
+      peak = Math.max(peak, value);
+    }
+    assert.ok(peak > 10, "HDR light sources must retain their dynamic range");
+  }
+});
+test("every bundled photographic asset matches its license and integrity manifest", () => {
+  const manifest = JSON.parse(
+    fs.readFileSync(
+      new URL("../public/textures/manifest.json", import.meta.url),
+    ),
+  );
+  assert.equal(manifest.length, 10);
+  for (const asset of manifest) {
+    const b = fs.readFileSync(
+      new URL("../public/textures/" + asset.file, import.meta.url),
+    );
+    assert.equal(b.length, asset.bytes);
+    assert.equal(createHash("sha256").update(b).digest("hex"), asset.sha256);
+    assert.ok(["CC0-1.0", "CC-BY-4.0"].includes(asset.license));
+    assert.ok(asset.source.startsWith("https://raw.githubusercontent.com/"));
+  }
+});
+test("merged ground scenery and orbital station have valid geometry and normals", () => {
+  const station = orbitalStation();
+  const geometries = ["azure", "glacier", "canyon", "caldera"].map(
+    groundGeometry,
+  );
+  station.traverse((o) => {
+    if (o.geometry) geometries.push(o.geometry);
+  });
+  for (const geometry of geometries) {
+    assert.ok(geometry.attributes.position.count > 100);
+    assert.equal(
+      geometry.attributes.normal.count,
+      geometry.attributes.position.count,
+    );
+    for (const attribute of Object.values(geometry.attributes))
+      for (const value of attribute.array) assert.ok(Number.isFinite(value));
+    geometry.computeBoundingSphere();
+    assert.ok(geometry.boundingSphere.radius > 0);
+    geometry.dispose();
+  }
+  station.traverse((o) => o.material?.dispose());
+});
 
 const tick = (s, seconds, controls = {}) => {
   for (let i = 0; i < seconds * 60; i++) s.update(1 / 60, controls);

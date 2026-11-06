@@ -1,32 +1,29 @@
-# SKYCHROME v2.9.0 — ready-to-host website
+# SKYCHROME v3.0.0 — ready-to-host website
 
-This folder is the compiled game. Keep `index.html`, `assets/`, `audio/`, and
-`account-config.json` together. Serve over HTTP or upload the whole folder to
-your existing Netlify site when ready.
+This folder is the compiled game. Keep `index.html`, `assets/`, `audio/`,
+`textures/`, `licenses/`, and `account-config.json` together. Serve over HTTP or
+upload the whole folder to your existing Netlify site when ready.
 
-New: three distinct jets with separate paint rewards, X-wing/TIE fighter space
-missions, V camera switching, working 3D cockpits, upgraded terrain/water,
-lighting/shadows, and a High preset aimed at 16 GB PCs with capable GPUs.
-
-v2.9.0 adds a new rotary-cannon sound for normal jets, more accurate enemy
-leading fire, detailed terrain materials and wet shorelines, moving ocean
-waves, atmospheric sky shading, and a planet with relief, separate clouds and
-night lighting. The space laser sound is unchanged. New textures and cannon
-audio are procedurally generated, not photographic scans or field recordings.
+v3.0.0 adds photographic rock/grass/sand/ice surfaces, HDR environment lighting,
+volumetric clouds, water reflections on High, bloom, contact shading, smoother
+aircraft, visible pilots, cockpit controls, fuller trees and a detailed orbital
+station. Choose **Graphics → High** for the complete visual upgrade. Balanced
+reduces expensive effects; Low preserves a lighter rendering path.
 
 Choose **Hangar** to select an airframe and paint. Choose **Space** for orbital
 combat, then choose an X-wing or TIE fighter in the hangar. Press **V** or tap
-**COCKPIT** in flight. Existing campaign, ranked, maps, music, saves, mobile
-controls and fullscreen remain available.
+**COCKPIT** in flight. Campaign, ranked, rewards, four maps, music, saves, mobile
+controls, fullscreen, the v2.9 cannon sound and improved enemy aiming remain.
 
 Keep the same site address to retain browser saves and imported songs. Export a
 player backup before updating. Preserve your configured public
 `account-config.json`; the supplied file has accounts disabled until you connect
 your own Supabase project. See `docs/ACCOUNTS.md`.
 
-Also keep the separate **SKYCHROME-v2.9.0-source.zip**: it contains the editable
-project, dependencies and tests. This website includes source maps to aid future
-recovery, but the source archive is the primary development backup.
+Keep **SKYCHROME-v3.0.0-source.zip** separately as your editable development
+backup. This website includes source maps to aid recovery.
+[Source and downloads](https://github.com/wwwadeesaushen7/SKYCHROME).
 
-Earlier release documents under `docs/` are historical. Current checks and
-hardware/provider limitations are in `VALIDATION.md`.
+[Visual credits](credits.html) list texture licenses. Current test results and
+hardware/provider limitations are in `VALIDATION.md`. Earlier documents under
+`docs/` are retained as historical records.
