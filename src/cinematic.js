@@ -1,4 +1,5 @@
 import * as T from "./three.js";
+import { cloudVolume } from "./cloud-volume.js";
 
 const fullscreenVertex = `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`;
 const common = `varying vec2 vUv;uniform sampler2D source;uniform vec2 texel;`;
@@ -20,10 +21,13 @@ float viewDepth(vec2 uv){float z=texture2D(depthMap,uv).r;return nearPlane*farPl
 vec3 aces(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
 void main(){
  vec3 c=texture2D(source,vUv).rgb;float d=viewDepth(vUv);float occlusion=0.;
- if(d<1800.){for(int i=0;i<8;i++){float a=float(i)*.785398;vec2 off=vec2(cos(a),sin(a))*texel*clamp(240./max(d,1.),2.,10.);
- float nd=viewDepth(clamp(vUv+off,vec2(0.),vec2(1.)));float delta=d-nd;
- occlusion+=smoothstep(.04,.6,delta)*(1.-smoothstep(1.,max(2.,d*.06),delta));}}
- c*=1.-occlusion*.055*aoStrength;
+ vec2 depthGradient=vec2(dFdx(d),dFdy(d));
+ // Contact shading is local: far depth quantization must not stripe cliffs.
+ // Compare with the receiver plane so an ordinary slope does not occlude itself.
+ if(d<100.){for(int i=0;i<8;i++){float a=float(i)*.785398;vec2 off=vec2(cos(a),sin(a))*texel*clamp(240./max(d,1.),2.,10.);
+ float nd=viewDepth(clamp(vUv+off,vec2(0.),vec2(1.)));float expected=d+dot(depthGradient,off/texel);float delta=expected-nd;
+ occlusion+=smoothstep(.06,.35,delta)*(1.-smoothstep(.8,max(1.5,d*.04),delta));}}
+ c*=1.-occlusion*.055*aoStrength*(1.-smoothstep(35.,100.,d));
  vec4 cloud=texture2D(clouds,vUv)*cloudEnabled;c=mix(c,cloud.rgb,cloud.a);
  c+=texture2D(bloom,vUv).rgb*bloomStrength*(1.-cloud.a*.8);
  c=aces(c*exposure);
@@ -34,51 +38,33 @@ void main(){
  gl_FragColor=vec4(max(c,vec3(0.)),1.);
  #include <colorspace_fragment>
 }`;
-const cloudShader = `varying vec2 vUv;uniform sampler2D noiseMap,depthMap;
+const cloudShader = `precision highp sampler3D;varying vec2 vUv;uniform sampler3D noiseVolume;uniform sampler2D depthMap;
 uniform mat4 invProjection,cameraWorld;uniform vec3 eye,sunDirection,sunColor;
-uniform float time,distance,nearPlane,farPlane,steps;
-float n3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);vec2 uv=(i.xy+vec2(37.,17.)*i.z+f.xy+.5)/256.;vec2 v=texture2D(noiseMap,uv).rg;return mix(v.x,v.y,f.z);}
-float density(vec3 p){float h=(p.y-320.)/330.;float shape=smoothstep(0.,.16,h)*(1.-smoothstep(.5,1.,h));
- vec3 q=vec3(p.x,p.y*1.3,p.z-distance)*.0037+vec3(time*.0018,0.,time*.0007);
- float weather=n3(q*vec3(.36,0.,.36)+31.);float n=n3(q)*.55+n3(q*2.09)*.28+n3(q*4.17)*.12+n3(q*8.31)*.05;
- return smoothstep(.53,.72,n+weather*.08)*shape;}
+uniform float time,distance,nearPlane,farPlane,steps,coverage,skyOnly;
+float density(vec3 p){float h=(p.y-330.)/370.;float shape=smoothstep(0.,.12,h)*(1.-smoothstep(.45,1.,h));
+ vec3 q=vec3(p.x,p.y*1.2,p.z-distance)*.0007+vec3(time*.00022,0.,time*.00008);
+ vec3 cells=texture(noiseVolume,q).rgb;
+ float weather=texture(noiseVolume,q*.28+vec3(.3,.1,.2)).r;
+ float base=cells.r*.72+cells.g*.28+weather*.16;
+ float body=smoothstep(.64-coverage*.18,.79-coverage*.18,base);
+ return max(0.,body-cells.b*.13*(1.-body))*shape;}
 void main(){vec4 ray4=invProjection*vec4(vUv*2.-1.,1.,1.);vec3 camRay=normalize(ray4.xyz/ray4.w);vec3 ray=normalize(mat3(cameraWorld)*camRay);
  if(ray.y<=.015){gl_FragColor=vec4(0.);return;}
- float start=max(0.,(320.-eye.y)/ray.y),end=min(13000.,(650.-eye.y)/ray.y);
- float z=texture2D(depthMap,vUv).r;float vd=nearPlane*farPlane/(farPlane-z*(farPlane-nearPlane));end=min(end,vd/max(.001,-camRay.z));
+ float start=max(0.,(330.-eye.y)/ray.y),end=min(13000.,(700.-eye.y)/ray.y);
+ float z=texture2D(depthMap,vUv).r;
+ if(skyOnly>.5 && z<.999999){gl_FragColor=vec4(0.);return;}
+ if(skyOnly<.5){float vd=nearPlane*farPlane/(farPlane-z*(farPlane-nearPlane));end=min(end,vd/max(.001,-camRay.z));}
  if(end<=start){gl_FragColor=vec4(0.);return;}
  float dt=(end-start)/steps;float trans=1.;vec3 accum=vec3(0.);
  float jitter=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.54);
- float silver=pow(max(dot(ray,sunDirection),0.),10.);
+ float mu=dot(ray,sunDirection);float silver=.5775/pow(max(.08,1.4225-1.3*mu),1.5);
  for(int i=0;i<40;i++){if(float(i)>=steps||trans<.025)break;
   vec3 p=eye+ray*(start+(float(i)+jitter)*dt);float den=density(p);
-  if(den>.002){float light=exp(-density(p+sunDirection*45.)*1.8-density(p+sunDirection*100.)*1.1);
-   vec3 color=mix(vec3(.23,.29,.36),sunColor*(.95+silver*.55),light);
+  if(den>.002){float light=exp(-density(p+sunDirection*30.)*1.3-density(p+sunDirection*75.)*1.6-density(p+sunDirection*160.)*.9);
+   vec3 color=mix(vec3(.16,.21,.28),sunColor*(.95+silver*.14),light);
    float fog=1.-exp(-length(p-eye)*.000055);color=mix(color,vec3(.39,.52,.64),fog*.5);
-   float alpha=1.-exp(-den*dt*.014);accum+=trans*alpha*color;trans*=1.-alpha;}}
+   float alpha=1.-exp(-den*dt*.022);accum+=trans*alpha*color;trans*=1.-alpha;}}
  float alpha=1.-trans;gl_FragColor=vec4(accum/max(alpha,.001),alpha);}`;
-
-function cloudNoise() {
-  const bytes = new Uint8Array(256 * 256 * 4);
-  let seed = 81723;
-  const values = new Uint8Array(256 * 256);
-  for (let i = 0; i < values.length; i++) {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    values[i] = seed >>> 24;
-  }
-  for (let y = 0; y < 256; y++)
-    for (let x = 0; x < 256; x++) {
-      const i = (y * 256 + x) * 4;
-      bytes[i] = values[y * 256 + x];
-      bytes[i + 1] = values[((y + 17) % 256) * 256 + ((x + 37) % 256)];
-      bytes[i + 3] = 255;
-    }
-  const t = new T.DataTexture(bytes, 256, 256);
-  t.wrapS = t.wrapT = T.RepeatWrapping;
-  t.magFilter = t.minFilter = T.LinearFilter;
-  t.needsUpdate = true;
-  return t;
-}
 
 export class CinematicRenderer {
   constructor(owner) {
@@ -127,7 +113,9 @@ export class CinematicRenderer {
       direction: { value: new T.Vector2() },
     });
     this.cloud = make(cloudShader, {
-      noiseMap: { value: cloudNoise() },
+      noiseVolume: { value: cloudVolume() },
+      coverage: { value: 0.6 },
+      skyOnly: { value: 0 },
       depthMap: { value: this.target.depthTexture },
       invProjection: { value: new T.Matrix4() },
       cameraWorld: { value: new T.Matrix4() },
@@ -189,6 +177,24 @@ export class CinematicRenderer {
     this.renderer.setRenderTarget(target);
     this.renderer.render(this.scene, this.camera);
   }
+  renderClouds(camera, depth, target, time, distance, inverse = null) {
+    const u = this.cloud.uniforms;
+    u.depthMap.value = depth;
+    u.invProjection.value.copy(inverse || camera.projectionMatrixInverse);
+    u.cameraWorld.value.copy(camera.matrixWorld);
+    u.eye.value.copy(camera.position);
+    u.time.value = time;
+    u.distance.value = distance;
+    u.nearPlane.value = camera.near;
+    u.farPlane.value = camera.far;
+    u.skyOnly.value = inverse ? 1 : 0;
+    u.coverage.value =
+      { azure: 0.18, glacier: 0.52, canyon: 0.06, caldera: 0.48 }[
+        this.owner.mapId
+      ] ?? 0.18;
+    u.steps.value = inverse ? 20 : this.quality === "high" ? 40 : 24;
+    this.pass(this.cloud, target);
+  }
   draw(
     scene,
     camera,
@@ -216,6 +222,7 @@ export class CinematicRenderer {
       );
     }
     const previousAuto = this.renderer.info.autoReset;
+    const previousShadowAuto = this.renderer.shadowMap.autoUpdate;
     this.renderer.info.autoReset = false;
     this.renderer.info.reset();
     try {
@@ -223,16 +230,13 @@ export class CinematicRenderer {
       this.renderer.setRenderTarget(this.target);
       this.renderer.render(scene, camera);
       if (this.cloudsActive) {
-        const u = this.cloud.uniforms;
-        u.invProjection.value.copy(camera.projectionMatrixInverse);
-        u.cameraWorld.value.copy(camera.matrixWorld);
-        u.eye.value.copy(camera.position);
-        u.time.value = time;
-        u.distance.value = distance;
-        u.nearPlane.value = camera.near;
-        u.farPlane.value = camera.far;
-        u.steps.value = this.quality === "high" ? 40 : 20;
-        this.pass(this.cloud, this.cloudTarget);
+        this.renderClouds(
+          camera,
+          this.target.depthTexture,
+          this.cloudTarget,
+          time,
+          distance,
+        );
       }
       this.extract.uniforms.source.value = this.target.texture;
       this.pass(this.extract, this.bloomA);
@@ -258,6 +262,7 @@ export class CinematicRenderer {
     } finally {
       this.renderer.setRenderTarget(null);
       this.renderer.info.autoReset = previousAuto;
+      this.renderer.shadowMap.autoUpdate = previousShadowAuto;
       this.hdr.value = 0;
     }
   }
@@ -273,7 +278,7 @@ export class CinematicRenderer {
       this.composite,
     ])
       x.dispose();
-    this.cloud.uniforms.noiseMap.value.dispose();
+    this.cloud.uniforms.noiseVolume.value.dispose();
     this.quad.geometry.dispose();
   }
 }

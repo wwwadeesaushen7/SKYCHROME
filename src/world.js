@@ -38,8 +38,10 @@ export class UpgradeRenderer {
     shadow.camera.right = shadow.camera.top = 360;
     shadow.camera.near = 1;
     shadow.camera.far = 1800;
-    shadow.bias = -0.00015;
-    shadow.normalBias = 0.18;
+    // Steep, smooth-shaded terrain needs enough separation at grazing sun
+    // angles to avoid self-shadow stippling across individual triangles.
+    shadow.bias = -0.00045;
+    shadow.normalBias = 0.8;
     shadow.radius = 3;
     owner.scene.add(this.shadowSun, this.shadowSun.target);
     owner.sunLight.intensity = 1.1;
@@ -266,6 +268,7 @@ export class UpgradeRenderer {
     this.stars.frustumCulled = false;
     this.spaceGroup.add(this.stars);
     const maps = planetTextures(2048, 1024);
+    this.planetCloudOffset = { value: 0 };
     this.planet = new T.Mesh(
       new T.SphereGeometry(850, 96, 64),
       new T.MeshStandardMaterial({
@@ -282,6 +285,8 @@ export class UpgradeRenderer {
     );
     this.planet.material.onBeforeCompile = (shader) => {
       shader.uniforms.planetSun = { value: this.owner.sunLight.position };
+      shader.uniforms.orbitalCloudMap = { value: maps.clouds };
+      shader.uniforms.orbitalCloudOffset = this.planetCloudOffset;
       shader.vertexShader =
         "varying vec3 planetNormal;\n" + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace(
@@ -289,14 +294,19 @@ export class UpgradeRenderer {
         "#include <begin_vertex>\nplanetNormal = mat3(modelMatrix) * normal;",
       );
       shader.fragmentShader =
-        "varying vec3 planetNormal;uniform vec3 planetSun;\n" +
+        "varying vec3 planetNormal;uniform vec3 planetSun;uniform sampler2D orbitalCloudMap;uniform float orbitalCloudOffset;\n" +
         shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <lights_fragment_end>",
+        "#include <lights_fragment_end>\nfloat cloudShadow=texture2D(orbitalCloudMap,vMapUv+vec2(orbitalCloudOffset,.004)).a;reflectedLight.directDiffuse*=1.-cloudShadow*.58;",
+      );
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <emissivemap_fragment>",
         "#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1. - smoothstep(-.15,.12,dot(normalize(planetNormal),planetSun));",
       );
     };
-    this.planet.material.customProgramCacheKey = () => "orbital-day-night-v2.9";
+    this.planet.material.customProgramCacheKey = () =>
+      "orbital-cloud-shadows-v3.1";
     this.planet.position.set(1050, -280, -2500);
     this.planet.rotation.z = 0.28;
     this.spaceGroup.add(this.planet);
@@ -314,7 +324,7 @@ export class UpgradeRenderer {
     this.planetClouds.rotation.z = 0.28;
     this.spaceGroup.add(this.planetClouds);
     const atmosphere = new T.Mesh(
-      new T.SphereGeometry(879, 64, 48),
+      new T.SphereGeometry(868, 64, 48),
       new T.ShaderMaterial({
         transparent: true,
         depthWrite: false,
@@ -419,6 +429,8 @@ export class UpgradeRenderer {
       this.nebula.position.copy(r.camera.position);
       this.planetClouds.rotation.y = time * 0.0055 + 0.04;
       this.planet.rotation.y = time * 0.004;
+      this.planetCloudOffset.value =
+        (this.planetClouds.rotation.y - this.planet.rotation.y) / (Math.PI * 2);
       for (let i = 0; i < 90; i++) {
         this.dummy.position.set(
           (i % 2 ? -1 : 1) * (680 + hash(i, 4) * 1000),
@@ -443,6 +455,7 @@ export class UpgradeRenderer {
       beforeScene: () =>
         this.reflection.render(
           !hangar && !this.space && this.settings.quality === "high",
+          state,
         ),
     });
   }

@@ -5,13 +5,36 @@ export class WaterReflection {
     this.owner = owner;
     this.camera = new T.PerspectiveCamera();
     this.target = new T.WebGLRenderTarget(640, 384, { type: T.HalfFloatType });
+    this.target.depthTexture = new T.DepthTexture(640, 384);
+    this.output = new T.WebGLRenderTarget(640, 384, {
+      type: T.HalfFloatType,
+      depthBuffer: false,
+    });
+    this.clouds = new T.WebGLRenderTarget(320, 192, {
+      type: T.HalfFloatType,
+      depthBuffer: false,
+    });
+    this.unclippedProjection = new T.Matrix4();
+    this.blend = new T.ShaderMaterial({
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+      uniforms: {
+        source: { value: this.target.texture },
+        clouds: { value: this.clouds.texture },
+      },
+      vertexShader:
+        "varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}",
+      fragmentShader:
+        "varying vec2 vUv;uniform sampler2D source,clouds;void main(){vec3 base=texture2D(source,vUv).rgb;vec4 c=texture2D(clouds,vUv);gl_FragColor=vec4(mix(base,c.rgb,c.a),1.);}",
+    });
     this.matrix = new T.Matrix4();
     this.direction = new T.Vector3();
     this.look = new T.Vector3();
     this.plane = new T.Plane(new T.Vector3(0, 1, 0), 2);
     const m = owner.ocean.material;
     Object.assign(m.uniforms, {
-      reflectionMap: { value: this.target.texture },
+      reflectionMap: { value: this.output.texture },
       reflectionMatrix: { value: this.matrix },
       reflectionStrength: { value: 0 },
     });
@@ -41,14 +64,16 @@ export class WaterReflection {
     m.needsUpdate = true;
     this.frame = 0;
   }
-  render(enabled) {
+  render(enabled, state = {}) {
     const o = this.owner;
     o.ocean.material.uniforms.reflectionStrength.value = enabled ? 1 : 0;
+    this.cloudsActive = enabled;
     if (!enabled) return;
     if (this.frame++ % 2) return;
     const src = o.camera,
       c = this.camera;
     c.copy(src);
+    this.unclippedProjection.copy(c.projectionMatrixInverse);
     c.position.copy(src.position);
     c.position.y = -4 - src.position.y;
     src.getWorldDirection(this.direction);
@@ -81,6 +106,19 @@ export class WaterReflection {
     try {
       o.renderer.setRenderTarget(this.target);
       o.renderer.render(o.scene, c);
+      // Reflection and main view share the same light and world transforms.
+      // Reuse this frame's sun shadow instead of drawing every caster twice.
+      o.renderer.shadowMap.autoUpdate = false;
+      const cinematic = o.upgrades.cinematic;
+      cinematic.renderClouds(
+        c,
+        this.target.depthTexture,
+        this.clouds,
+        state.time || 0,
+        state.distance || 0,
+        this.unclippedProjection,
+      );
+      cinematic.pass(this.blend, this.output);
     } finally {
       hidden.forEach((x, i) => (x.visible = visibility[i]));
       o.renderer.setRenderTarget(prior);
@@ -88,5 +126,8 @@ export class WaterReflection {
   }
   dispose() {
     this.target.dispose();
+    this.output.dispose();
+    this.clouds.dispose();
+    this.blend.dispose();
   }
 }

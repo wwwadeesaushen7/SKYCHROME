@@ -131,12 +131,14 @@ export function createVehicle(id, paint, textures) {
   root.name = id;
   const metal = new T.MeshPhysicalMaterial({
     color: paint.body,
-    metalness: 0.22,
-    roughness: 0.42,
-    clearcoat: 0.28,
-    clearcoatRoughness: 0.27,
+    metalness: 0.16,
+    roughness: 0.67,
+    clearcoat: 0.22,
+    clearcoatRoughness: 0.35,
     map: textures?.panels || null,
     roughnessMap: textures?.paintRoughness || null,
+    normalMap: textures?.panelNormal || null,
+    normalScale: new T.Vector2(0.45, 0.45),
   });
   const accent = new T.MeshStandardMaterial({
     color: paint.accent,
@@ -210,6 +212,23 @@ export function createVehicle(id, paint, textures) {
     o.scale.setScalar(size);
     root.add(o);
     return o;
+  };
+  const intake = (x, y, z, radius) => {
+    tube(dark, x, y, z + 0.04, radius, radius, 0.04);
+    tube(chrome, x, y, z - 0.07, radius * 0.19, radius * 0.1, 0.2);
+    for (let i = 0; i < 18; i++) {
+      const a = (i * Math.PI) / 9;
+      const blade = box(
+        heatMetal,
+        x + Math.cos(a) * radius * 0.53,
+        y + Math.sin(a) * radius * 0.53,
+        z - 0.04,
+        radius * 0.62,
+        0.035,
+        0.045,
+      );
+      blade.rotation.z = a + 0.23;
+    }
   };
   const nozzle = (x, y, z, r = 0.55) => {
     tube(heatMetal, x, y, z, r, r * 0.92, 0.7);
@@ -398,6 +417,8 @@ export function createVehicle(id, paint, textures) {
       ),
     );
     canopy(0, 0.72, -3.3, 0.68, 0.75, 1.65);
+    tube(chrome, 0, -0.05, -8.8, 0.025, 0.012, 0.85);
+    if (delta) intake(0, -0.52, -1.55, 0.44);
     box(accent, 0, 0.65, -6, 0.13, 0.045, 2.4);
     for (const side of [-1, 1]) {
       const pts = attack
@@ -459,9 +480,11 @@ export function createVehicle(id, paint, textures) {
       if (attack) {
         tube(metal, side * 2, 1.1, 3, 0.8, 0.9, 4);
         tube(dark, side * 2, 1.1, 1, 0.7, 0.7, 0.12);
+        intake(side * 2, 1.1, 0.9, 0.67);
         nozzle(side * 2, 1.1, 5, 0.75);
       } else if (!delta) {
         tube(dark, side * 1, -0.15, -0.5, 0.48, 0.6, 3.5);
+        intake(side * 1, -0.15, -2.3, 0.53);
         nozzle(side * 0.78, -0.1, 5.8);
       }
       // Hardpoints, rails, missiles and separate movable control surfaces.

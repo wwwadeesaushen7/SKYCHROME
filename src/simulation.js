@@ -1,6 +1,7 @@
 // Reconstructed from the shipped v2.7.0 game; readable simulation and terrain core.
 import { updateSpaceFlight } from "./space.js";
 import { enemyFiringSolution } from "./enemy-aim.js";
+import { islandHeight } from "./terrain-shape.js";
 const re = (i, e, s) => Math.max(e, Math.min(s, i)),
   le = (i, e, s, t) => i + (e - i) * (1 - Math.exp(-s * t)),
   dt = 9.81,
@@ -93,27 +94,13 @@ function Di(i, e, s = {}) {
 }
 const be = -2,
   ae = 3900,
-  ee = 48,
-  ue = 52,
+  ee = 72,
+  ue = 80,
   Gi = (i, e) => ((((i + e + 3400) % ae) + ae) % ae) - 3400;
-function Ni(i, e, s) {
-  const t = Math.hypot(i / (s.size * 1.3), e / (s.size * 1.5)),
-    n =
-      Math.sin(i * 0.036 + s.id) * 0.15 +
-      Math.cos(e * 0.035 + i * 0.012) * 0.12 +
-      Math.sin(e * 0.08 - i * 0.053) * 0.05,
-    o = 1 - t + n,
-    r =
-      0.8 +
-      0.2 *
-        Math.abs(
-          Math.sin(i * 0.021 + e * 0.014 + s.id) * Math.cos(e * 0.024 - s.id),
-        );
-  return (
-    (o > 0 ? Math.pow(o, 1.65) * s.height * r : -3) +
-    (o > 0.08 ? Math.sin(i * 0.1) * Math.cos(e * 0.09) * 2 : 0)
-  );
+function Ni(x, z, island) {
+  return islandHeight(x, z, island);
 }
+
 const Bi = (i = "azure") =>
     Array.from({ length: 16 }, (e, s) => {
       const t = {
@@ -152,26 +139,7 @@ const Bi = (i = "azure") =>
         for (let o = 0; o <= ee; o++) {
           const r = (o / ee - 0.5) * t.width,
             a = (n / ue - 0.5) * t.depth;
-          let c = Ni(r, a, t),
-            h = Math.hypot(r / (t.size * 1.3), a / (t.size * 1.5));
-          (i === "glacier" &&
-            c > 0 &&
-            (c =
-              c * (0.8 + Math.abs(Math.sin(r * 0.027 + a * 0.019)) * 0.35) +
-              Math.max(0, 1 - h) * 12),
-            i === "canyon" &&
-              (c =
-                h < 0.85
-                  ? Math.min(t.height, Math.max(0, (0.94 - h) * 5) * t.height) +
-                    Math.sin(a * 0.08) * 2
-                  : -3),
-            i === "caldera" &&
-              c > 0 &&
-              (c = Math.max(
-                0,
-                c - Math.max(0, 1 - h / 0.22) * t.height * 0.58,
-              )),
-            (t.heights[n * (ee + 1) + o] = c));
+          t.heights[n * (ee + 1) + o] = Ni(r, a, t);
         }
       return t;
     }),

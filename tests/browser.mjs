@@ -74,7 +74,7 @@ try {
     "release, lobby, guest profile and preserved reward count",
     async () => {
       const s = await state();
-      assert.equal(s.version, "3.0.0");
+      assert.equal(s.version, "3.1.0");
       assert.equal(s.mode, "deck");
       assert.equal(s.profile.unlockedLevel, 1);
       assert.equal(s.profile.skins.length, 3);
@@ -241,6 +241,8 @@ try {
       assert.equal(render.assets.loaded, 10);
       assert.equal(render.cinematic, true);
       assert.equal(render.volumetricClouds, true);
+      assert.equal(render.cloudVolume, true);
+      assert.equal(render.reflectedClouds, true);
       assert.equal(render.planarReflection, true);
       assert.equal(render.photographedLighting, true);
       assert.equal(render.shadowResolution, 4096);
@@ -260,6 +262,7 @@ try {
       assert.ok(s.render.spaceAmbient < 0.2);
       assert.equal(s.render.cinematic, true);
       assert.equal(s.render.volumetricClouds, false);
+      assert.equal(s.render.reflectedClouds, false);
       assert.equal(s.render.planarReflection, false);
       await page.screenshot({ path: output + "/high-space.png" });
     },
@@ -297,6 +300,7 @@ try {
         assert.equal(s.render.cinematic, quality === "balanced");
         assert.equal(s.render.volumetricClouds, quality === "balanced");
         assert.equal(s.render.planarReflection, false);
+        assert.equal(s.render.reflectedClouds, false);
         assert.equal(s.render.shadows, quality === "balanced");
       }
     },

@@ -4,6 +4,11 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { decodeRadiance } from "../src/visual-assets.js";
 import { groundGeometry, orbitalStation } from "../src/scenery.js";
+import { cloudVolumeData, volumeNoise } from "../src/cloud-volume.js";
+import { airframeTextures } from "../src/airframe-textures.js";
+import { CombatEffects, blastEnvelope } from "../src/combat-effects.js";
+import { Et, Fs, ee, ue, Gi } from "../src/simulation.js";
+import * as T from "../src/three.js";
 import {
   ea as Simulation,
   as as quickMissions,
@@ -34,6 +39,122 @@ import { normalizeKeys } from "../src/controls.js";
 import { enemyFiringSolution } from "../src/enemy-aim.js";
 import { cannonSamples } from "../src/cannon-audio.js";
 import { planetTextures } from "../src/materials.js";
+
+test("terrain collision matches the rendered triangle grid and wraps continuously", () => {
+  for (const map of ["azure", "glacier", "canyon", "caldera"]) {
+    for (const island of Et(map)) {
+      assert.equal(island.heights.length, (ee + 1) * (ue + 1));
+      for (let j = 2; j < ue; j += 11)
+        for (let i = 2; i < ee; i += 13) {
+          const x = (i / ee - 0.5) * island.width,
+            z = (j / ue - 0.5) * island.depth;
+          assert.ok(
+            Math.abs(Fs(island, x, z) - island.heights[j * (ee + 1) + i]) <
+              0.0001,
+          );
+          const fx = 0.2,
+            fz = 0.35,
+            index = j * (ee + 1) + i;
+          const h =
+            island.heights[index] * (1 - fx - fz) +
+            island.heights[index + 1] * fx +
+            island.heights[index + ee + 1] * fz;
+          assert.ok(
+            Math.abs(
+              Fs(
+                island,
+                x + (island.width / ee) * fx,
+                z + (island.depth / ue) * fz,
+              ) - h,
+            ) < 0.0001,
+          );
+        }
+      const x = island.x,
+        z = Gi(island.z, 720);
+      assert.ok(
+        Math.abs(Fe(x, z, 720, map) - Fe(x, z, 720 + 3900, map)) < 0.0001,
+      );
+    }
+    for (let distance = 0; distance < 3900; distance += 13)
+      assert.ok(
+        Fe(0, 0, distance, map) < 30,
+        `${map}: keep the central cruise route open`,
+      );
+  }
+});
+test("cloud volume is periodic in all three dimensions and contains useful density detail", () => {
+  for (let i = 0; i < 20; i++) {
+    const x = i * 0.137,
+      y = i * 0.193,
+      z = i * 0.271;
+    const sample = volumeNoise(x, y, z, 8);
+    for (const offset of [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ])
+      assert.ok(
+        Math.abs(
+          sample - volumeNoise(x + offset[0], y + offset[1], z + offset[2], 8),
+        ) < 1e-12,
+      );
+  }
+  const data = cloudVolumeData(16);
+  assert.equal(data.length, 16 ** 3 * 4);
+  for (let c = 0; c < 3; c++) {
+    let lo = 255,
+      hi = 0;
+    for (let i = c; i < data.length; i += 4) {
+      lo = Math.min(lo, data[i]);
+      hi = Math.max(hi, data[i]);
+    }
+    assert.ok(hi - lo > 50);
+  }
+});
+test("airframe material maps have consistent dimensions, roughness and normalized normals", () => {
+  const textures = airframeTextures();
+  for (const t of Object.values(textures)) {
+    assert.equal(t.image.width, 1024);
+    assert.equal(t.image.data.length, 1024 * 1024 * 4);
+    assert.equal(t.generateMipmaps, true);
+  }
+  const n = textures.panelNormal.image.data;
+  for (let i = 0; i < n.length; i += 148) {
+    const length = Math.hypot(
+      (n[i] - 128) / 127,
+      (n[i + 1] - 128) / 127,
+      (n[i + 2] - 128) / 127,
+    );
+    assert.ok(length > 0.98 && length < 1.02);
+  }
+});
+test("combat effects obey budgets, freeze on pause and expire without leaving lights active", () => {
+  const scene = new T.Scene(),
+    camera = new T.PerspectiveCamera(),
+    fx = new CombatEffects(scene);
+  for (let i = 0; i < 20; i++) fx.burst(i, 40, -20, "high");
+  assert.equal(fx.particles.length, 128);
+  assert.equal(fx.blasts.length, 8);
+  const playing = { status: "playing", speed: 90, mission: { mode: "quick" } };
+  fx.update(playing, 0.05, camera);
+  assert.ok(fx.light.intensity > 0);
+  const age = fx.particles[0].age,
+    z = fx.particles[0].z;
+  fx.update({ ...playing, status: "paused" }, 1, camera);
+  assert.equal(fx.particles[0].age, age);
+  assert.equal(fx.particles[0].z, z);
+  for (let i = 0; i < 80; i++) fx.update(playing, 0.1, camera);
+  assert.equal(fx.mesh.count, 0);
+  assert.equal(fx.shockwaves.count, 0);
+  assert.equal(fx.light.intensity, 0);
+  fx.update({ ...playing, mission: { mode: "space" } }, 0, camera);
+  fx.burst(0, 40, -20, "low");
+  assert.ok(fx.particles.every((p) => p.space && p.life < 2.4));
+  fx.reset();
+  assert.equal(fx.particles.length, 0);
+  assert.ok(blastEnvelope(0.1) > blastEnvelope(0.2));
+  assert.equal(blastEnvelope(1), 0);
+});
 
 test("Radiance RLE decodes known HDR intensities and rejects corrupt scanlines", () => {
   const header = Buffer.from(

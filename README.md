@@ -1,4 +1,4 @@
-# SKYCHROME v3.0.0
+# SKYCHROME v3.1.0
 
 Editable continuation of the v2.7.0 browser game, with three distinct aircraft,
 independent paint selection, X-wing/TIE space combat, working first-person
@@ -6,8 +6,8 @@ cockpits, and upgraded graphics.
 
 ## Downloads
 
-- [Download the ready-to-host v3.0.0 website ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v3.0.0-website.zip)
-- [Download the editable v3.0.0 source ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v3.0.0-source.zip)
+- [Download the ready-to-host v3.1.0 website ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v3.1.0-website.zip)
+- [Download the editable v3.1.0 source ZIP](https://github.com/wwwadeesaushen7/SKYCHROME/raw/refs/heads/main/artifacts/SKYCHROME-v3.1.0-source.zip)
 - [Archive SHA-256 checksums](artifacts/checksums.json)
 
 The editable project is also available directly in this repository. The website
@@ -45,6 +45,7 @@ For browser regression checks, start preview on port 4174, then run:
 npx playwright install chromium
 SKYCHROME_BROWSER=/path/to/chromium npm run test:browser
 npm run test:services
+npm run test:effects
 ```
 
 On the prepared cloud machine Chromium is available at `/usr/bin/chromium`.
@@ -53,6 +54,29 @@ are written to `test-results/`. The tests use software rendering; they do not
 certify performance on a physical gaming PC.
 
 ## New features
+
+### v3.1.0 terrain, atmosphere and combat detail
+
+- **Terrain shapes:** ridges, gullies, terraced canyon walls and volcanic basins
+  replace the smoother island peaks. Distant mountain ranges have depth and
+  irregular ridgelines. Rendering and collision use the same denser triangle
+  grid; the central cruise route remains clear.
+- **Surface detail:** photographic materials blend at multiple scales to reduce
+  repetition, with less exaggerated relief. Trees receive environment lighting
+  and are restricted to gentler slopes below the treeline.
+- **Clouds and reflections:** a periodic 3D volume combines smooth noise and
+  cellular billows, with erosion at cloud edges and several sunlight samples.
+  Cloud cover varies by map. High water reflections now include those clouds.
+  Reflection frames reuse the sun shadow map to avoid rendering it twice.
+- **Aircraft finishes:** new 1K panel, rivet, scratch and grime maps control
+  albedo, normals and roughness. Painted surfaces have a softer sheen. Normal
+  jets gain intake fan blades and nose probes; paint remains independent of
+  aircraft selection.
+- **Combat effects:** hot fireballs cool into expanding smoke, with brief local
+  lighting and subtle pressure rings. Atmospheric smoke rises; space gas
+  disperses without buoyancy. Particle budgets, pausing and cleanup are tested.
+- **Orbital lighting:** the moving planet cloud layer casts surface shadows,
+  and the atmospheric rim is thinner.
 
 ### v3.0.0 visual upgrade
 
@@ -160,6 +184,10 @@ Private credentials must never go in website files.
 | `src/reflections.js` | Planar water reflection and oblique clipping |
 | `src/visual-assets.js` | Local texture loading, HDR decoding and asset status |
 | `src/scenery.js` | Merged trees, rocks and orbital station geometry |
+| `src/terrain-shape.js` | Shared deterministic ridges, gullies and terrain shapes |
+| `src/cloud-volume.js` | Periodic 3D cloud density texture |
+| `src/airframe-textures.js` | Aircraft panel, normal and roughness maps |
+| `src/combat-effects.js` | Fireballs, smoke, pressure waves and local light |
 | `src/cannon-audio.js` | Original rotary-cannon sample synthesis |
 | `src/enemy-aim.js` | Predictive hostile fire and bounded dispersion |
 | `src/game.js` | Existing UI, renderer, audio, touch, fullscreen and account integration |

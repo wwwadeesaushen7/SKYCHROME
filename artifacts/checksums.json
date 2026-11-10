@@ -22,5 +22,13 @@
   "SKYCHROME-v3.0.0-source.zip": {
     "bytes": 15109406,
     "sha256": "342228ccca0244a1c3289a2f9d5e170d4ac28f08273a9f5c40f469a63e70f2da"
+  },
+  "SKYCHROME-v3.1.0-website.zip": {
+    "bytes": 13833450,
+    "sha256": "f8f553b812d5bb6cb9b4f0dce146c347bb5f35bf4d5315e3a408bc72308abe19"
+  },
+  "SKYCHROME-v3.1.0-source.zip": {
+    "bytes": 15120551,
+    "sha256": "38e4ab96bf09aeebc1ef8f75e58785860bfa96594f6887affb7b8be569a61105"
   }
 }

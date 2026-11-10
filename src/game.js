@@ -8,7 +8,10 @@ import { SPACE_MISSIONS, updateSpaceFlight } from "./space.js";
 import { UpgradeRenderer } from "./world.js";
 import { createCannonBuffers } from "./cannon-audio.js";
 import { groundGeometry } from "./scenery.js";
-import { MeshDepthMaterial } from "./three.js";
+import { distantHeight } from "./terrain-shape.js";
+import { airframeTextures } from "./airframe-textures.js";
+import { CombatEffects } from "./combat-effects.js";
+import { MeshDepthMaterial, MeshStandardMaterial } from "./three.js";
 import "./upgrades.css";
 import {
   S as fi,
@@ -334,65 +337,6 @@ function Xt(i) {
 }
 function Zt() {
   if (ut) return ut;
-  const i = Xt(512),
-    e = i.getContext("2d");
-  ((e.fillStyle = "#e0e3e3"), e.fillRect(0, 0, 512, 512));
-  for (let l = 0; l < 8; l++)
-    for (let d = -64; d < 512; d += 128) {
-      const u = l * 64,
-        p = d + (l % 2) * 64,
-        v = 228 + Ce(d, l, 18) * 12;
-      ((e.fillStyle = `rgb(${v},${v + 1},${v + 2})`),
-        e.fillRect(p + 1, u + 1, 126, 62),
-        (e.strokeStyle = "rgba(43,51,56,.23)"),
-        (e.lineWidth = 0.7),
-        e.strokeRect(p + 0.5, u + 0.5, 128, 64));
-      for (let w = 7; w < 128; w += 12)
-        ((e.fillStyle = "rgba(42,48,53,.27)"),
-          e.fillRect(p + w, u + 3, 1, 1),
-          e.fillRect(p + w, u + 60, 1, 1));
-      ((e.fillStyle = "rgba(255,255,255,.24)"),
-        e.fillRect(p + 2, u + 2, 123, 1),
-        l % 3 === 0 &&
-          ((e.strokeStyle = "rgba(70,76,80,.16)"),
-          e.strokeRect(p + 35, u + 20, 32, 19)));
-    }
-  for (let l = 0; l < 1300; l++) {
-    const d = (l * 97) % 512,
-      u = (l * 193) % 512;
-    ((e.fillStyle = l % 2 ? "rgba(255,255,255,.07)" : "rgba(54,64,70,.05)"),
-      e.fillRect(d, u, 1, 2 + (l % 6)));
-  }
-  const s = e.getImageData(0, 0, 512, 512).data,
-    t = new Uint8Array(256 * 256 * 4),
-    n = (l, d) => s[(((d + 512) % 512) * 512 + ((l + 512) % 512)) * 4] / 255;
-  for (let l = 0; l < 256; l++)
-    for (let d = 0; d < 256; d++) {
-      const u = (n(d * 2 - 2, l * 2) - n(d * 2 + 2, l * 2)) * 1.8,
-        p = (n(d * 2, l * 2 - 2) - n(d * 2, l * 2 + 2)) * 1.8,
-        v = Math.hypot(u, p, 1),
-        w = (l * 256 + d) * 4;
-      t.set([128 + (u / v) * 127, 128 + (p / v) * 127, 128 + 127 / v, 255], w);
-    }
-  const o = new yt(t, 256, 256);
-  ((o.wrapS = o.wrapT = bt),
-    (o.minFilter = xt),
-    (o.magFilter = wt),
-    (o.generateMipmaps = !0),
-    (o.needsUpdate = !0));
-  const r = new Uint8Array(16384 * 4);
-  for (let l = 0; l < 128; l++)
-    for (let d = 0; d < 128; d++) {
-      const u = (l * 128 + d) * 4,
-        p = 188 + Ce(d, l, 72) * 35;
-      r.set([255, p, 255, 255], u);
-    }
-  const a = new yt(r, 128, 128);
-  ((a.wrapS = a.wrapT = bt),
-    (a.magFilter = wt),
-    (a.minFilter = xt),
-    (a.generateMipmaps = !0),
-    (a.needsUpdate = !0));
   const c = Array.from({ length: 6 }, (l, d) => {
       const u = Xt(64),
         p = u.getContext("2d"),
@@ -413,7 +357,7 @@ function Zt() {
   return (
     (h.colorSpace = Tt),
     (h.needsUpdate = !0),
-    (ut = { panels: oa(i), panelNormal: o, paintRoughness: a, environment: h }),
+    (ut = { ...airframeTextures(), environment: h }),
     ut
   );
 }
@@ -827,18 +771,33 @@ class va {
 function ya(i, e) {
   const s = groundGeometry(i),
     t = 384,
-    n = new He({ color: 16777215, vertexColors: true }),
+    n = new MeshStandardMaterial({
+      color: 16777215,
+      vertexColors: true,
+      roughness: 0.96,
+    }),
     o = new ge(s, n, t),
     r = new Float32Array(t),
     a = new is(),
     c = new B();
   let h = 0;
   for (const l of Et(i))
-    for (let d = 0; d < 72 && h < (l.id + 1) * 24; d++) {
+    for (let d = 0; d < 144 && h < (l.id + 1) * 24; d++) {
       const u = (Ce(d, l.id, 41) - 0.5) * l.width * 0.78,
         p = (Ce(d, l.id, 77) - 0.5) * l.depth * 0.78,
         v = Fs(l, u, p);
       if (v < 8 || v > 150) continue;
+      if (
+        i === "azure" &&
+        (v > 115 ||
+          Math.hypot(
+            Fs(l, u + 3, p) - Fs(l, u - 3, p),
+            Fs(l, u, p + 3) - Fs(l, u, p - 3),
+          ) /
+            6 >
+            0.72)
+      )
+        continue;
       const w = 1.8 + Ce(d, l.id, 98) * 2.8,
         y = i === "azure",
         m = y ? w * 1.45 : w * 0.65;
@@ -892,97 +851,6 @@ function ya(i, e) {
     (o.count = h),
     o
   );
-}
-class ba {
-  constructor(e) {
-    this.particles = [];
-    const s = 64,
-      t = new Uint8Array(s * s * 4);
-    for (let a = 0; a < s; a++)
-      for (let c = 0; c < s; c++) {
-        const h = Math.hypot((c / s - 0.5) * 2, (a / s - 0.5) * 2),
-          l = Y(c / 9, a / 9, 64, 7) * 0.6 + Y(c / 3, a / 3, 64, 21) * 0.4,
-          d = Math.max(0, 1 - h * h) * (0.35 + l * 0.65),
-          u = (a * s + c) * 4;
-        t.set([255, 255, 255, Math.min(255, d * d * 255)], u);
-      }
-    const n = new yt(t, s, s);
-    ((n.magFilter = n.minFilter = wt), (n.needsUpdate = !0));
-    const o = new je(1, 1);
-    ((this.opacity = new Float32Array(72)),
-      o.setAttribute("particleAlpha", new Ls(this.opacity, 1).setUsage(ie)));
-    const r = new Ke({
-      transparent: !0,
-      depthWrite: !1,
-      uniforms: { smoke: { value: n } },
-      vertexShader:
-        "attribute float particleAlpha;varying vec2 vUv;varying vec3 vTint;varying float vAlpha;void main(){vUv=uv;vTint=instanceColor;vAlpha=particleAlpha;gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.);}",
-      fragmentShader:
-        "uniform sampler2D smoke;varying vec2 vUv;varying vec3 vTint;varying float vAlpha;void main(){float alpha=texture2D(smoke,vUv).a*vAlpha;if(alpha<.008)discard;gl_FragColor=vec4(vTint,alpha);}",
-    });
-    ((this.mesh = new ge(o, r, 72)),
-      this.mesh.instanceMatrix.setUsage(ie),
-      this.mesh.setColorAt(0, new B()),
-      (this.mesh.count = 0),
-      (this.mesh.frustumCulled = !1),
-      e.add(this.mesh),
-      (this.dummy = new is()),
-      (this.color = new B()));
-  }
-  burst(e, s, t, n, o = !1) {
-    const r = n === "low" ? 24 : n === "high" ? 72 : 48,
-      a = n === "low" ? 7 : 12;
-    o && (this.particles.length = Math.min(this.particles.length, r - a));
-    for (let c = 0; c < a && this.particles.length < r; c++)
-      this.particles.push({
-        x: e + (Math.random() - 0.5) * 3,
-        y: s + (Math.random() - 0.5) * 3,
-        z: t + (Math.random() - 0.5) * 3,
-        vx: (Math.random() - 0.5) * 9,
-        vy: 3 + Math.random() * 7,
-        vz: (Math.random() - 0.5) * 9,
-        age: 0,
-        life: 1.2 + Math.random() * 1.8,
-        size: 3 + Math.random() * 4,
-        fire: c < 4,
-      });
-  }
-  reset() {
-    ((this.particles.length = 0), (this.mesh.count = 0));
-  }
-  update(e, s, t) {
-    const n = e.status === "playing";
-    if (e.status !== "paused")
-      for (let o = this.particles.length - 1; o >= 0; o--) {
-        const r = this.particles[o];
-        if (((r.age += s), r.age > r.life)) {
-          ((this.particles[o] = this.particles.at(-1)), this.particles.pop());
-          continue;
-        }
-        ((r.x += r.vx * s),
-          (r.y += r.vy * s),
-          (r.z += (r.vz + (n ? e.speed : 0)) * s));
-      }
-    this.mesh.count = this.particles.length;
-    for (let o = 0; o < this.particles.length; o++) {
-      const r = this.particles[o],
-        a = r.age / r.life,
-        c = r.fire ? Math.max(0, 1 - r.age * 1.8) : 0;
-      (this.dummy.position.set(r.x, r.y, r.z),
-        this.dummy.quaternion.copy(t.quaternion),
-        this.dummy.scale.setScalar(r.size * (1 + r.age * 2)),
-        this.dummy.updateMatrix(),
-        this.mesh.setMatrixAt(o, this.dummy.matrix),
-        this.color.setRGB(0.19 + c * 0.81, 0.2 + c * 0.43, 0.21 - c * 0.13),
-        this.mesh.setColorAt(o, this.color),
-        (this.opacity[o] =
-          Math.min(1, r.age * 18) * Math.max(0, 1 - a) * (0.5 + c * 0.4)));
-    }
-    this.mesh.count &&
-      ((this.mesh.instanceMatrix.needsUpdate = !0),
-      (this.mesh.instanceColor.needsUpdate = !0),
-      (this.mesh.geometry.attributes.particleAlpha.needsUpdate = !0));
-  }
 }
 class wa {
   constructor(e) {
@@ -1451,7 +1319,7 @@ class Ma {
       this.buildOcean(),
       this.buildIslands(),
       this.buildClouds(),
-      (this.combat = new ba(this.scene)),
+      (this.combat = new CombatEffects(this.scene)),
       (this.effects = new va(this.scene)),
       (this.jet = Hs(!1, s.finish)),
       this.scene.add(this.jet),
@@ -1652,18 +1520,9 @@ class Ma {
       for (let l = 0; l < c.count; l++) {
         const d = c.getX(l),
           u = c.getZ(l),
-          p = Y(d * 0.002 + 15, r * 3, 64, 17),
-          v = Y(d * 0.009 + 21, r * 7, 64, 39),
-          w =
-            this.mapId === "glacier"
-              ? 700
-              : this.mapId === "canyon"
-                ? 360
-                : 470;
-        let y =
-          (w * (0.32 + p * 0.8) + v * 140) * Math.max(0, 1 - Math.abs(u) / 600);
-        (this.mapId === "canyon" && (y = Math.min(y, w * 0.8)),
-          c.setY(l, y - 45));
+          w = this.mapId === "glacier" ? 700 : 470;
+        const y = distantHeight(d, u, r, this.mapId);
+        c.setY(l, y);
         const m = t[2].clone().lerp(new B(s.fog), 0.2 + r * 0.2);
         (this.mapId === "glacier" && y > 400 && m.lerp(t[3], 0.65),
           h.push(m.r, m.g, m.b));
@@ -4372,7 +4231,7 @@ g("#app").innerHTML = `
   <div class="header-actions"><span class="online"><i></i> ALL SYSTEMS ONLINE</span><span class="header-separator"></span><button class="icon-button" id="sound-button" aria-label="Mute audio">${A("sound")}</button><button class="icon-button" id="settings-button" aria-label="Open settings">${A("settings")}</button><button class="pilot-avatar" id="account-button" aria-label="Player account">P1<span></span></button></div>
 </header>
 <main class="page">
-  <section class="page-intro"><div><div class="eyebrow">A LITTLE ALTITUDE. A LOT OF FREEDOM.</div><h1 id="page-title">Ready for takeoff<span>?</span></h1></div><div class="session-info"><span class="live-dot"></span><span>FLIGHT DECK <b>/</b> <strong id="mode-label">STANDBY</strong></span><span class="session-tag">v3.0.0</span></div></section>
+  <section class="page-intro"><div><div class="eyebrow">A LITTLE ALTITUDE. A LOT OF FREEDOM.</div><h1 id="page-title">Ready for takeoff<span>?</span></h1></div><div class="session-info"><span class="live-dot"></span><span>FLIGHT DECK <b>/</b> <strong id="mode-label">STANDBY</strong></span><span class="session-tag">v3.1.0</span></div></section>
   <div class="progress-strip"><button id="profile-button"><span class="live-dot"></span><strong id="pilot-name">Spectre</strong><span id="save-state">Saved on this device</span></button><button id="rank-button"><span id="pilot-rank">CADET</span><strong id="pilot-rp">0 RP</strong></button><button id="campaign-button"><span>CAMPAIGN</span><strong id="campaign-count">0 / 100</strong></button><button id="skins-button"><span>HANGAR</span><strong id="skin-count">3 / 21 skins</strong></button></div>
   <div class="flight-layout">
     <section class="flight-stage" id="flight-stage" aria-label="Flight simulator">
@@ -5608,7 +5467,7 @@ try {
 Object.defineProperty(window, "__SKYCHROME__", {
   value: {
     getState: () => ({
-      version: "3.0.0",
+      version: "3.1.0",
       vehicle: R?.jet.userData.vehicleId,
       cameraView: _e ? "cockpit" : "chase",
       instruments: R?.upgrades.cockpit.telemetry || null,
@@ -5715,6 +5574,10 @@ Object.defineProperty(window, "__SKYCHROME__", {
             assets: { ...R.upgrades.assets },
             cinematic: R.upgrades.cinematic.active || false,
             volumetricClouds: R.upgrades.cinematic.cloudsActive || false,
+            cloudVolume:
+              R.upgrades.cinematic.cloud.uniforms.noiseVolume.value
+                .isData3DTexture === true,
+            reflectedClouds: R.upgrades.reflection.cloudsActive || false,
             planarReflection:
               R.ocean.material.uniforms.reflectionStrength.value > 0.5,
             photographedLighting: !!R.upgrades.lighting.outdoor,
@@ -5732,6 +5595,8 @@ Object.defineProperty(window, "__SKYCHROME__", {
             environmentReflections: !!R.scene.environment,
             groundDetails: R.detailMesh.count,
             smokeParticles: R.combat.particles.length,
+            blastWaves: R.combat.blasts.length,
+            blastLight: R.combat.light.intensity,
             hangarYaw: R.hangar.yaw,
             jetRoll: R.jet.rotation.z,
             jetYaw: R.jet.rotation.y,

@@ -181,16 +181,20 @@ export function terrainMaterial(previous, worldDistance, mapId) {
       weights /= max(dot(weights, vec3(1.)), .001);
       vec4 rock = triplanar(rockMap, surfacePosition * .038, weights);
       vec4 ground = texture2D(groundMap, surfacePosition.xz * .07);
-      rock.rgb=mix(rock.rgb,triplanar(photoRock,surfacePosition*.06,weights).rgb*surfaceTint,photoBlend);
-      ground.rgb=mix(ground.rgb,texture2D(photoGround,surfacePosition.xz*.07).rgb*surfaceTint*.7,photoBlend);
+      vec3 photoStone=triplanar(photoRock,surfacePosition*.038,weights).rgb;
+      photoStone=mix(photoStone,triplanar(photoRock,surfacePosition*.013+vec3(.31,.73,.19),weights).rgb,.38);
+      rock.rgb=mix(rock.rgb,photoStone*surfaceTint,photoBlend);
+      vec3 photoSoil=mix(texture2D(photoGround,surfacePosition.xz*.07).rgb,texture2D(photoGround,surfacePosition.xz*.019+vec2(.37,.61)).rgb,.3);
+      ground.rgb=mix(ground.rgb,photoSoil*surfaceTint*.7,photoBlend);
       float cliff = 1. - smoothstep(.52, .86, normalize(surfaceNormal).y);
       vec4 surface = mix(ground, rock, cliff);
       float shore = 1. - smoothstep(.5, 7., surfacePosition.y);
       float wet = 1. - smoothstep(-1., 2.8, surfacePosition.y);
       vec3 sand = mix(shoreColor * (.68 + ground.a * .5),texture2D(photoSand,surfacePosition.xz*.09).rgb*surfaceTint,photoBlend);
-      float macro = texture2D(groundMap, surfacePosition.xz * .003).a;
-      diffuseColor.rgb *= mix(surface.rgb, sand, shore) * (.82 + macro * .36) * (1. - wet * .32);
-      float relief = mix(ground.a * .22, rock.a * .8, cliff) * (1. - shore * .6);
+      float macro = texture2D(groundMap, surfacePosition.xz * .002).a;
+      float drainage=texture2D(groundMap,surfacePosition.xz*.008).a;
+      diffuseColor.rgb *= mix(surface.rgb, sand, shore) * (.65 + macro * .6 + drainage*.12) * (1. - wet * .32);
+      float relief = mix(ground.a * .22, rock.a * .8, cliff) * (1. - shore * .6) * (1.-photoBlend*.88);
     `,
     );
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -208,15 +212,15 @@ export function terrainMaterial(previous, worldDistance, mapId) {
       vec3 r1 = cross(sigmaY, normal), r2 = cross(normal, sigmaX);
       float determinant = dot(sigmaX, r1);
       normal = normalize(abs(determinant) * normal - sign(determinant) * (dFdx(relief) * r1 + dFdy(relief) * r2));
-      vec3 nx=texture2D(photoNormal,surfacePosition.yz*.06).xyz*2.-1.;
-      vec3 ny=texture2D(photoNormal,surfacePosition.xz*.06).xyz*2.-1.;
-      vec3 nz=texture2D(photoNormal,surfacePosition.xy*.06).xyz*2.-1.;
+      vec3 nx=texture2D(photoNormal,surfacePosition.yz*.038).xyz*2.-1.;
+      vec3 ny=texture2D(photoNormal,surfacePosition.xz*.038).xyz*2.-1.;
+      vec3 nz=texture2D(photoNormal,surfacePosition.xy*.038).xyz*2.-1.;
       vec3 perturb=vec3(0.,nx.x,nx.y)*weights.x+vec3(ny.x,0.,ny.y)*weights.y+vec3(nz.x,nz.y,0.)*weights.z;
       normal=normalize(normal+mat3(viewMatrix)*perturb*photoBlend*(.18+cliff*.4));
     `,
     );
   };
-  mat.customProgramCacheKey = () => "skychrome-photographic-pbr-3.0";
+  mat.customProgramCacheKey = () => "skychrome-layered-pbr-3.1";
   return mat;
 }
 
